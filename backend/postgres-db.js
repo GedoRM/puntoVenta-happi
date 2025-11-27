@@ -1,25 +1,14 @@
 // backend/postgres-db.js
 import pkg from 'pg';
 const { Pool } = pkg;
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 console.log('🔗 Configurando PostgreSQL con Aiven...');
-
-// Configuración SSL con tu certificado
-const sslConfig = {
-  rejectUnauthorized: true,
-  ca: fs.readFileSync(path.join(__dirname, 'certs', 'ca.pem')).toString()
-};
+console.log('📡 DATABASE_URL:', process.env.DATABASE_URL ? '✅ Existe' : '❌ No existe');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false  // ← ESTO ES CLAVE PARA AIVEN
+    rejectUnauthorized: false  // ← ESTO ES CLAVE
   },
   max: 10,
   idleTimeoutMillis: 30000,
@@ -31,6 +20,11 @@ async function testConnection() {
   let client;
   try {
     console.log('🔄 Probando conexión con Aiven...');
+    
+    if (!process.env.DATABASE_URL) {
+      throw new Error('DATABASE_URL no está definida');
+    }
+    
     client = await pool.connect();
     const result = await client.query('SELECT version(), current_database() as db_name');
     
@@ -47,7 +41,7 @@ async function testConnection() {
   }
 }
 
-// Función para inicializar la base de datos
+// El resto de tu código de inicialización permanece igual...
 async function initializeDatabase() {
   try {
     console.log('🚀 Inicializando base de datos Happi Helados...');
@@ -168,6 +162,8 @@ async function initializeDatabase() {
 // Inicializar automáticamente
 if (process.env.DATABASE_URL) {
   initializeDatabase();
+} else {
+  console.log('ℹ️  DATABASE_URL no encontrada, usando SQLite local');
 }
 
 export default pool;

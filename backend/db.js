@@ -9,37 +9,29 @@ const __dirname = path.dirname(__filename);
 let db;
 let databaseType = 'SQLite';
 
-// Configuración - PostgreSQL si está disponible
 if (process.env.DATABASE_URL) {
-  console.log('🔄 Configurando PostgreSQL con Aiven...');
+  console.log('🔄 Usando PostgreSQL...');
   databaseType = 'PostgreSQL';
   
+  // Importar dinámicamente el módulo PostgreSQL
   import('./postgres-db.js')
     .then(module => {
       db = module.default;
-      console.log('✅ PostgreSQL configurado como base de datos principal');
+      console.log('✅ PostgreSQL configurado');
     })
     .catch(error => {
-      console.error('❌ Error con PostgreSQL:', error.message);
-      console.log('🔄 Usando SQLite como fallback...');
+      console.error('❌ Error PostgreSQL:', error.message);
+      console.log('🔄 Cayendo a SQLite...');
       db = setupSQLite();
-      databaseType = 'SQLite (fallback)';
     });
 } else {
+  console.log('🔄 Usando SQLite local (DATABASE_URL no encontrada)');
   db = setupSQLite();
 }
 
 function setupSQLite() {
-  console.log('📊 Configurando SQLite local...');
   const dbPath = path.join(__dirname, "pos.db");
-  const sqliteDB = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      console.error("Error con SQLite:", err.message);
-    } else {
-      console.log("✅ SQLite conectado correctamente");
-    }
-  });
-  return sqliteDB;
+  return new sqlite3.Database(dbPath);
 }
 
 export { db as default, databaseType };
