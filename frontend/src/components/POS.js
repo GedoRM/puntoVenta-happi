@@ -14,7 +14,7 @@ function POS() {
   // 🟢 Cargar categorías al inicio
   useEffect(() => {
     axios
-      .get("http://https://puntoventa-happi.onrender.com//api/categorias")
+      .get("https://puntoventa-happi.onrender.com/api/categorias")
       .then((res) => setCategorias(res.data))
       .catch((err) => console.error("Error cargando categorias:", err));
   }, []);
@@ -24,7 +24,7 @@ function POS() {
     setCategoriaSeleccionada(cat); // cat = { id, nombre }
 
     axios
-      .get(`http://https://puntoventa-happi.onrender.com//api/productos/${cat.id}`)
+      .get(`https://puntoventa-happi.onrender.com/api/productos/${cat.id}`)
       .then((res) => setProductos(res.data))
       .catch((err) => console.error("Error cargando productos:", err));
   };
