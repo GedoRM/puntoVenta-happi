@@ -60,7 +60,7 @@ function Dashboard() {
   // 📌 Datos de hoy
   const cargarDatosDashboard = async () => {
     try {
-      const res = await axios.get("http://https://puntoventa-happi.onrender.com//api/dashboard/hoy");
+      const res = await axios.get("https://puntoventa-happi.onrender.com/api/dashboard/hoy");
       setVentasHoy(res.data.ventasHoy);
       setCantidadVentas(res.data.cantidadVentas);
       setProductosVendidos(res.data.productosVendidos);
@@ -74,7 +74,7 @@ function Dashboard() {
   const cargarHistorial = () => {
     if (!fechaInicio || !fechaFin) return;
     axios
-      .get(`http://https://puntoventa-happi.onrender.com//api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
+      .get(`https://puntoventa-happi.onrender.com/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
       .then((res) => setHistorial(res.data))
       .catch((err) => console.error("Error cargando historial:", err));
   };
@@ -87,7 +87,7 @@ function Dashboard() {
 
   const generarReporte = (fecha, tipo) => {
     if (!fecha) return;
-    fetch(`http://https://puntoventa-happi.onrender.com//api/dashboard/reporte?fecha=${fecha}&tipo=${tipo}`)
+    fetch(`https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fecha}&tipo=${tipo}`)
       .then((res) => res.blob())
       .then((blob) => {
         const url = window.URL.createObjectURL(blob);
@@ -98,7 +98,7 @@ function Dashboard() {
   // 📌 Categorías
   const cargarCategorias = async () => {
     try {
-      const res = await axios.get("http://https://puntoventa-happi.onrender.com//api/categorias");
+      const res = await axios.get("https://puntoventa-happi.onrender.com/api/categorias");
       setCategorias(res.data);
     } catch (err) {
       console.error("Error cargando categorías:", err);
@@ -108,7 +108,7 @@ function Dashboard() {
   const agregarCategoria = async () => {
     if (!nuevaCategoria) return;
     try {
-      const res = await axios.post("http://https://puntoventa-happi.onrender.com//api/categorias", { nombre: nuevaCategoria });
+      const res = await axios.post("https://puntoventa-happi.onrender.com/api/categorias", { nombre: nuevaCategoria });
       setNuevaCategoria("");
       cargarCategorias();
       setToast({ mensaje: `✅ Categoría "${res.data.nombre}" agregada`, tipo: "success" });
@@ -128,7 +128,7 @@ function Dashboard() {
 
     try {
       const res = await axios.post(
-        "http://https://puntoventa-happi.onrender.com//api/productos",
+        "https://puntoventa-happi.onrender.com/api/productos",
         nuevoProducto
       );
       setNuevoProducto({ nombre: "", precio: "", categoria_id: "" });

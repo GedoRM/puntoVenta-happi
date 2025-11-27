@@ -96,7 +96,7 @@ function POS() {
   //Confirmar venta
   const confirmarEnvioVenta = async () => {
     try {
-      await axios.post("http://https://puntoventa-happi.onrender.com//api/ventas", ventaPendiente);
+      await axios.post("https://puntoventa-happi.onrender.com/api/ventas", ventaPendiente);
 
       setMostrarConfirmacion(false);
       alert("Venta guardada correctamente");

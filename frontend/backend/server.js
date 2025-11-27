@@ -16,7 +16,7 @@ const app = express();
 
 // Configuración de CORS
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://dashboard-frontend.onrender.com'],
+  origin: ['http://localhost:3000', 'https://puntoventa-happi.onrender.com/'],
   credentials: true
 }));
 
