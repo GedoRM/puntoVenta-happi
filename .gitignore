@@ -8,6 +8,10 @@
 # testing
 /coverage
 
+# SQLite database (opcional)
+*.db
+*.sqlite
+
 # production
 /build
 
