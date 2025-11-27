@@ -1,49 +1,65 @@
 // backend/postgres-db.js
 import pkg from 'pg';
 const { Pool } = pkg;
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Configuración para Aiven con SSL
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+console.log('🔗 Configurando PostgreSQL con Aiven...');
+
+// Configuración SSL con tu certificado
+const sslConfig = {
+  rejectUnauthorized: true,
+  ca: fs.readFileSync(path.join(__dirname, 'certs', 'ca.pem')).toString()
+};
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false, // Esto es importante para Aiven
-    ca: process.env.SSL_CERT || undefined
-  },
-  // Configuraciones adicionales para mejor rendimiento
-  max: 20, // máximo de conexiones en el pool
+  ssl: sslConfig,
+  max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000,
 });
 
 // Función para probar la conexión
 async function testConnection() {
+  let client;
   try {
-    const client = await pool.connect();
-    const result = await client.query('SELECT version(), NOW() as current_time');
-    console.log('✅ Conectado a PostgreSQL en Aiven:');
-    console.log('   📅', result.rows[0].current_time);
-    console.log('   🐘', result.rows[0].version.split(',')[0]);
-    client.release();
+    console.log('🔄 Probando conexión con Aiven...');
+    client = await pool.connect();
+    const result = await client.query('SELECT version(), current_database() as db_name');
+    
+    console.log('✅ CONEXIÓN EXITOSA con Aiven:');
+    console.log('   🗄️  Base de datos:', result.rows[0].db_name);
+    console.log('   🐘 PostgreSQL:', result.rows[0].version.split(',')[0]);
+    
     return true;
   } catch (error) {
-    console.error('❌ Error conectando a PostgreSQL:', error.message);
+    console.error('❌ Error en conexión:', error.message);
     return false;
+  } finally {
+    if (client) client.release();
   }
 }
 
-// Función para inicializar la base de datos con TU estructura
+// Función para inicializar la base de datos
 async function initializeDatabase() {
   try {
-    const connectionOk = await testConnection();
-    if (!connectionOk) {
-      throw new Error('No se pudo conectar a la base de datos');
+    console.log('🚀 Inicializando base de datos Happi Helados...');
+    
+    const connected = await testConnection();
+    if (!connected) {
+      throw new Error('No se pudo conectar a PostgreSQL');
     }
 
     const client = await pool.connect();
     
-    console.log('🔄 Creando tablas en PostgreSQL...');
+    // Crear tablas
+    console.log('📋 Creando tablas...');
     
-    // Crear tablas EXACTAMENTE como en tu SQLite
     await client.query(`
       CREATE TABLE IF NOT EXISTS categorias (
         id SERIAL PRIMARY KEY,
@@ -95,21 +111,10 @@ async function initializeDatabase() {
       )
     `);
 
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS venta_items (
-        id VARCHAR(255) PRIMARY KEY,
-        venta_id VARCHAR(255),
-        producto_id VARCHAR(255),
-        cantidad INTEGER,
-        subtotal DECIMAL(10,2),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    console.log('✅ Tablas creadas');
 
-    console.log('✅ Tablas creadas en PostgreSQL');
-
-    // Insertar TUS datos exactos
-    console.log('🔄 Insertando datos iniciales...');
+    // Insertar datos de Happi Helados
+    console.log('🍦 Insertando datos de Happi Helados...');
     
     await client.query(`
       INSERT INTO categorias (id, nombre) 
@@ -127,42 +132,38 @@ async function initializeDatabase() {
       ON CONFLICT (id) DO NOTHING
     `);
 
-    // Insertar productos de ejemplo
     await client.query(`
-      INSERT INTO productos (categoria_id, nombre, precio, imagen) 
+      INSERT INTO productos (categoria_id, nombre, precio) 
       VALUES 
-      (1, 'Copa de Vainilla', 65.00, NULL),
-      (1, 'Copa de Chocolate', 70.00, NULL),
-      (1, 'Copa Mixta', 75.00, NULL),
-      (2, 'Paleta de Mango', 25.00, NULL),
-      (2, 'Paleta de Limón', 22.00, NULL),
-      (3, 'Cono Simple', 40.00, NULL),
-      (3, 'Cono Doble', 55.00, NULL),
-      (13, 'Crepa de Nutella', 85.00, NULL),
-      (13, 'Crepa de Frutas', 75.00, NULL)
+      (1, 'Copa de Vainilla', 65.00),
+      (1, 'Copa de Chocolate', 70.00),
+      (1, 'Copa Mixta', 75.00),
+      (2, 'Paleta de Mango', 25.00),
+      (2, 'Paleta de Limón', 22.00),
+      (3, 'Cono Simple', 40.00),
+      (3, 'Cono Doble', 55.00),
+      (13, 'Crepa de Nutella', 85.00),
+      (13, 'Crepa de Frutas', 75.00)
       ON CONFLICT DO NOTHING
     `);
 
-    console.log('✅ Base de datos PostgreSQL inicializada con datos de Happi');
-    
-    // Verificar datos insertados
+    // Verificar datos
     const categoriasCount = await client.query('SELECT COUNT(*) FROM categorias');
     const productosCount = await client.query('SELECT COUNT(*) FROM productos');
-    const usuariosCount = await client.query('SELECT COUNT(*) FROM usuarios');
     
     console.log('📊 Datos insertados:');
     console.log('   🏷️  Categorías:', categoriasCount.rows[0].count);
     console.log('   🍦 Productos:', productosCount.rows[0].count);
-    console.log('   👤 Usuarios:', usuariosCount.rows[0].count);
     
     client.release();
+    console.log('🎉 Base de datos Happi Helados inicializada en PostgreSQL!');
+    
   } catch (error) {
     console.error('❌ Error inicializando PostgreSQL:', error.message);
-    // No lances el error, deja que la app use SQLite como fallback
   }
 }
 
-// Ejecutar inicialización solo si estamos en producción con DATABASE_URL
+// Inicializar automáticamente
 if (process.env.DATABASE_URL) {
   initializeDatabase();
 }

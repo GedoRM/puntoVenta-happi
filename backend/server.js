@@ -529,24 +529,30 @@ app.all("/api/*", (req, res) => {
 });
 
 // Ruta para validar conexion SQL
-app.get("/api/database-info", async (req, res) => {
+// Ruta para verificar la base de datos
+app.get("/api/database-status", async (req, res) => {
   try {
-    if (usingPostgreSQL) {
+    if (databaseType === 'PostgreSQL') {
       const client = await db.connect();
       const version = await client.query('SELECT version()');
+      const dbInfo = await client.query('SELECT current_database() as db_name, current_user as user');
       const stats = await client.query(`
         SELECT 
           (SELECT COUNT(*) FROM categorias) as categorias,
           (SELECT COUNT(*) FROM productos) as productos,
-          (SELECT COUNT(*) FROM usuarios) as usuarios,
-          (SELECT COUNT(*) FROM ventas) as ventas
+          (SELECT COUNT(*) FROM usuarios) as usuarios
       `);
       client.release();
       
       res.json({
         database: "PostgreSQL",
         status: "✅ Conectado",
-        version: version.rows[0].version.split(',')[0],
+        connection: "Aiven",
+        details: {
+          database: dbInfo.rows[0].db_name,
+          user: dbInfo.rows[0].user,
+          version: version.rows[0].version.split(',')[0]
+        },
         stats: stats.rows[0]
       });
     } else {
@@ -555,8 +561,7 @@ app.get("/api/database-info", async (req, res) => {
         SELECT 
           (SELECT COUNT(*) FROM categorias) as categorias,
           (SELECT COUNT(*) FROM productos) as productos,
-          (SELECT COUNT(*) FROM usuarios) as usuarios,
-          (SELECT COUNT(*) FROM ventas) as ventas
+          (SELECT COUNT(*) FROM usuarios) as usuarios
       `, (err, row) => {
         if (err) {
           res.json({ 
@@ -568,6 +573,7 @@ app.get("/api/database-info", async (req, res) => {
           res.json({ 
             database: "SQLite", 
             status: "✅ Conectado",
+            connection: "Local",
             stats: row
           });
         }
@@ -575,8 +581,8 @@ app.get("/api/database-info", async (req, res) => {
     }
   } catch (error) {
     res.status(500).json({ 
-      database: "PostgreSQL", 
-      status: "❌ Error de conexión",
+      database: databaseType, 
+      status: "❌ Error",
       error: error.message 
     });
   }

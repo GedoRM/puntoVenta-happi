@@ -7,42 +7,39 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let db;
-let usingPostgreSQL = false;
+let databaseType = 'SQLite';
 
-// Función para configurar SQLite (fallback)
-function setupSQLite() {
-  console.log('📊 Usando SQLite como base de datos');
-  
-  const dbPath = path.join(__dirname, "pos.db");
-  const sqliteDB = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      console.error("Error abriendo SQLite:", err.message);
-    } else {
-      console.log("✅ Conectado a SQLite:", dbPath);
-      // Tu inicialización de SQLite aquí
-    }
-  });
-  
-  return sqliteDB;
-}
-
-// Intentar usar PostgreSQL si está configurado
+// Configuración - PostgreSQL si está disponible
 if (process.env.DATABASE_URL) {
-  console.log('🔄 Intentando conectar a PostgreSQL...');
+  console.log('🔄 Configurando PostgreSQL con Aiven...');
+  databaseType = 'PostgreSQL';
   
   import('./postgres-db.js')
     .then(module => {
       db = module.default;
-      usingPostgreSQL = true;
-      console.log('🎯 PostgreSQL configurado como base de datos principal');
+      console.log('✅ PostgreSQL configurado como base de datos principal');
     })
-    .catch(err => {
-      console.error('❌ Error cargando PostgreSQL, usando SQLite:', err.message);
+    .catch(error => {
+      console.error('❌ Error con PostgreSQL:', error.message);
+      console.log('🔄 Usando SQLite como fallback...');
       db = setupSQLite();
+      databaseType = 'SQLite (fallback)';
     });
 } else {
   db = setupSQLite();
 }
 
-// Exportar la base de datos y un indicador de qué estamos usando
-export { db as default, usingPostgreSQL };
+function setupSQLite() {
+  console.log('📊 Configurando SQLite local...');
+  const dbPath = path.join(__dirname, "pos.db");
+  const sqliteDB = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error("Error con SQLite:", err.message);
+    } else {
+      console.log("✅ SQLite conectado correctamente");
+    }
+  });
+  return sqliteDB;
+}
+
+export { db as default, databaseType };
