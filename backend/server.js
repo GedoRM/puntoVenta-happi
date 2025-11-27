@@ -529,6 +529,44 @@ app.all("/api/*", (req, res) => {
   });
 });
 
+// Ruta para validar conexion SQL
+app.get("/api/db-check", async (req, res) => {
+  try {
+    if (process.env.DATABASE_URL) {
+      // Probar PostgreSQL
+      const postgres = await import('./postgres-db.js');
+      const result = await postgres.default.query('SELECT version()');
+      
+      res.json({
+        database: "PostgreSQL",
+        status: "✅ Conectado correctamente",
+        version: result.rows[0].version,
+        connection: "Aiven"
+      });
+    } else {
+      // Usar SQLite
+      db.get("SELECT sqlite_version() as version", (err, row) => {
+        if (err) {
+          res.json({ database: "SQLite", status: "❌ Error", error: err.message });
+        } else {
+          res.json({ 
+            database: "SQLite", 
+            status: "✅ Conectado correctamente",
+            version: row.version,
+            connection: "Local"
+          });
+        }
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ 
+      database: "PostgreSQL", 
+      status: "❌ Error de conexión",
+      error: error.message 
+    });
+  }
+});
+
 // ===============================================================
 //                        INICIAR SERVIDOR
 // ===============================================================
