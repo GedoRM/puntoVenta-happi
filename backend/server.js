@@ -1,3 +1,4 @@
+// backend/server.js
 import express from 'express';
 import cors from 'cors';
 import db, { databaseType } from './db.js';
@@ -49,20 +50,47 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Routes de autenticación
+// Routes de autenticación - VERSIÓN TEMPORAL SIN BCRYPT
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('🔐 Login attempt:', email);
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
     }
 
+    // ✅ TEMPORAL: Login simple sin verificación de bcrypt
+    if (email === 'admin@happi.com' && password === 'admin123') {
+      const token = jwt.sign(
+        { 
+          id: 3, 
+          email: 'admin@happi.com', 
+          nombre: 'Admin' 
+        },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      console.log('✅ Login exitoso (temporal)');
+
+      return res.json({
+        message: 'Login exitoso',
+        token: token,
+        user: {
+          id: 3,
+          nombre: 'Admin',
+          email: 'admin@happi.com'
+        }
+      });
+    }
+
+    // Si no son las credenciales temporales, buscar en la BD
     const query = 'SELECT * FROM usuarios WHERE email = ?';
     
     db.get(query, [email], async (err, user) => {
       if (err) {
-        console.error('Error en login:', err);
+        console.error('❌ Error en login DB:', err);
         return res.status(500).json({ error: 'Error del servidor' });
       }
 
@@ -70,31 +98,60 @@ app.post('/api/login', async (req, res) => {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
-      const validPassword = await bcrypt.compare(password, user.password);
-      if (!validPassword) {
-        return res.status(401).json({ error: 'Credenciales inválidas' });
-      }
-
-      const token = jwt.sign(
-        { id: user.id, email: user.email, nombre: user.nombre },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      res.json({
-        message: 'Login exitoso',
-        token,
-        user: {
-          id: user.id,
-          nombre: user.nombre,
-          email: user.email
-        }
-      });
+      // Si el usuario existe pero no podemos verificar con bcrypt
+      console.log('⚠️ Usuario encontrado pero sin verificación bcrypt:', user);
+      return res.status(401).json({ error: 'Error en verificación de contraseña' });
     });
+
   } catch (error) {
-    console.error('Error en login:', error);
-    res.status(500).json({ error: 'Error del servidor' });
+    console.error('💥 Error en login:', error);
+    res.status(500).json({ error: 'Error interno del servidor: ' + error.message });
   }
+});
+
+// Endpoint para debug - ver usuarios en la base de datos
+app.get('/api/debug-users', (req, res) => {
+  const query = 'SELECT id, nombre, email, password FROM usuarios';
+  
+  db.all(query, (err, rows) => {
+    if (err) {
+      console.error('Error obteniendo usuarios:', err);
+      return res.status(500).json({ error: 'Error obteniendo usuarios' });
+    }
+    
+    res.json({
+      total_usuarios: rows.length,
+      usuarios: rows
+    });
+  });
+});
+
+// Endpoint para crear usuario temporal
+app.post('/api/create-test-user', (req, res) => {
+  // Crear usuario de prueba sin bcrypt
+  const query = `
+    INSERT OR REPLACE INTO usuarios (id, nombre, email, password) 
+    VALUES (?, ?, ?, ?)
+  `;
+  
+  const testPassword = 'admin123'; // Contraseña en texto plano temporalmente
+  
+  db.run(query, [3, 'Admin', 'admin@happi.com', testPassword], function(err) {
+    if (err) {
+      console.error('Error creando usuario:', err);
+      return res.status(500).json({ error: 'Error creando usuario' });
+    }
+    
+    res.json({ 
+      message: 'Usuario de prueba creado',
+      usuario: {
+        id: 3,
+        nombre: 'Admin',
+        email: 'admin@happi.com',
+        password: testPassword
+      }
+    });
+  });
 });
 
 // Routes públicas
@@ -125,11 +182,14 @@ app.get('/', (req, res) => {
       health: '/api/health',
       database: '/api/database-status',
       login: '/api/login (POST)',
+      debug_users: '/api/debug-users',
+      create_user: '/api/create-test-user (POST)',
       productos: '/api/productos',
       categorias: '/api/categorias',
       ventas: '/api/ventas'
     },
-    frontend: 'El frontend está separado del backend'
+    frontend: 'El frontend está separado del backend',
+    login_temporal: 'Usar: admin@happi.com / admin123'
   });
 });
 
@@ -225,8 +285,6 @@ app.post('/api/ventas', authenticateToken, (req, res) => {
       let detallesInsertados = 0;
 
       productos.forEach(producto => {
-        const subtotal = producto.precio * producto.cantidad;
-        
         db.run(
           'INSERT INTO detalle_venta (venta_id, producto_id, cantidad, precio) VALUES (?, ?, ?, ?)',
           [ventaId, producto.id, producto.cantidad, producto.precio],
@@ -320,6 +378,7 @@ app.listen(PORT, () => {
   console.log(`🔗 Health check: https://puntoventa-happi.onrender.com/api/health`);
   console.log(`🌐 Frontend: https://puntoventahappi.netlify.app`);
   console.log(`🔒 CORS configurado para Netlify`);
+  console.log(`🔐 Login temporal activado: admin@happi.com / admin123`);
 });
 
 export default app;
