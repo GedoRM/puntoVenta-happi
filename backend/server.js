@@ -1,292 +1,307 @@
-import express from "express";
-import cors from "cors";
-import bodyParser from "body-parser";
-import db, { databaseType } from "./db.js";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import PDFDocument from "pdfkit";
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// backend/server.js
+import express from 'express';
+import cors from 'cors';
+import db, { databaseType } from './db.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Configuración de CORS
-app.use(cors({
-  origin: ['http://localhost:3000', 'https://puntoventa-happi.onrender.com'],
-  credentials: true
-}));
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static('public'));
 
-app.use(bodyParser.json());
+// JWT Secret (usar variable de entorno o un valor por defecto)
+const JWT_SECRET = process.env.JWT_SECRET || 'happi-helados-secret-temporal';
 
-const SECRET_KEY = process.env.SECRET_KEY || "mi_clave_secreta_para_desarrollo";
+console.log(`🚀 Iniciando Servidor Happi Helados...`);
+console.log(`📊 Usando base de datos: ${databaseType}`);
 
-// ===============================================================
-//                     MIDDLEWARE DE LOGGING
-// ===============================================================
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
+// Middleware de autenticación
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-// ===============================================================
-//                     RUTA DE BIENVENIDA
-// ===============================================================
-app.get("/", (req, res) => {
-  res.json({
-    message: "🚀 Backend del Punto de Venta Happi Helados funcionando!",
-    environment: process.env.NODE_ENV || "development",
-    database: databaseType,
-    timestamp: new Date().toISOString(),
-    endpoints: {
-      health: "/api/health",
-      database: "/api/database-status",
-      test: "/api/test",
-      login: "POST /api/login",
-      categorias: "GET /api/categorias",
-      productos: "GET /api/productos",
-      dashboard: "/api/dashboard/hoy"
+  if (token == null) {
+    return res.status(401).json({ error: 'Token requerido' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Token inválido' });
     }
+    req.user = user;
+    next();
   });
-});
+};
 
-// ===============================================================
-//                     HEALTH CHECK
-// ===============================================================
-app.get("/api/health", (req, res) => {
-  res.status(200).json({ 
-    status: "OK", 
-    message: "🚀 Server is running!",
-    environment: process.env.NODE_ENV || "development",
-    database: databaseType,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// ===============================================================
-//                     VERIFICACIÓN DE BASE DE DATOS
-// ===============================================================
-app.get("/api/database-status", async (req, res) => {
+// Routes de autenticación
+app.post('/api/login', async (req, res) => {
   try {
-    console.log('📊 Solicitando estado de base de datos...');
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email y contraseña requeridos' });
+    }
+
+    // Buscar usuario en la base de datos
+    const query = 'SELECT * FROM usuarios WHERE email = ?';
     
-    if (databaseType === 'PostgreSQL') {
-      try {
-        const client = await db.connect();
-        const version = await client.query('SELECT version()');
-        const dbInfo = await client.query('SELECT current_database() as db_name, current_user as user');
-        const stats = await client.query(`
-          SELECT 
-            (SELECT COUNT(*) FROM categorias) as categorias,
-            (SELECT COUNT(*) FROM productos) as productos,
-            (SELECT COUNT(*) FROM usuarios) as usuarios,
-            (SELECT COUNT(*) FROM ventas) as ventas
-        `);
-        client.release();
-        
-        res.json({
-          database: "PostgreSQL",
-          status: "✅ Conectado",
-          connection: "Aiven",
-          details: {
-            database: dbInfo.rows[0].db_name,
-            user: dbInfo.rows[0].user,
-            version: version.rows[0].version.split(',')[0]
-          },
-          stats: stats.rows[0],
-          timestamp: new Date().toISOString()
-        });
-      } catch (pgError) {
-        res.json({
-          database: "PostgreSQL",
-          status: "❌ Error de conexión",
-          error: pgError.message,
-          timestamp: new Date().toISOString()
-        });
+    db.get(query, [email], async (err, user) => {
+      if (err) {
+        console.error('Error en login:', err);
+        return res.status(500).json({ error: 'Error del servidor' });
       }
-    } else {
-      // SQLite
-      db.get(`
-        SELECT 
-          (SELECT COUNT(*) FROM categorias) as categorias,
-          (SELECT COUNT(*) FROM productos) as productos,
-          (SELECT COUNT(*) FROM usuarios) as usuarios,
-          (SELECT COUNT(*) FROM ventas) as ventas
-      `, (err, row) => {
-        if (err) {
-          res.json({ 
-            database: "SQLite", 
-            status: "❌ Error",
-            error: err.message,
-            timestamp: new Date().toISOString()
-          });
-        } else {
-          res.json({ 
-            database: "SQLite", 
-            status: "✅ Conectado",
-            connection: "Local",
-            stats: row,
-            timestamp: new Date().toISOString()
-          });
+
+      if (!user) {
+        return res.status(401).json({ error: 'Credenciales inválidas' });
+      }
+
+      // Verificar contraseña
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        return res.status(401).json({ error: 'Credenciales inválidas' });
+      }
+
+      // Generar token
+      const token = jwt.sign(
+        { id: user.id, email: user.email, nombre: user.nombre },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.json({
+        message: 'Login exitoso',
+        token,
+        user: {
+          id: user.id,
+          nombre: user.nombre,
+          email: user.email
         }
       });
-    }
-  } catch (error) {
-    res.status(500).json({ 
-      database: databaseType, 
-      status: "❌ Error general",
-      error: error.message,
-      timestamp: new Date().toISOString()
     });
+  } catch (error) {
+    console.error('Error en login:', error);
+    res.status(500).json({ error: 'Error del servidor' });
   }
 });
 
-// ===============================================================
-//                     RUTA DE PRUEBA
-// ===============================================================
-app.get("/api/test", (req, res) => {
+// Routes públicas
+app.get('/api/health', (req, res) => {
   res.json({ 
-    message: "✅ Backend funcionando correctamente!",
-    environment: process.env.NODE_ENV || "development",
+    status: 'OK', 
+    message: 'Servidor Happi Helados funcionando',
     database: databaseType,
     timestamp: new Date().toISOString()
   });
 });
 
-// ===============================================================
-//                     LOGIN
-// ===============================================================
-app.post("/api/login", (req, res) => {
-  const { email, password } = req.body;
-  
-  if (!email || !password) {
-    return res.status(400).json({ error: "Email y contraseña requeridos" });
-  }
-
-  // Usuario de prueba
-  if (email === "admin@test.com" && password === "admin123") {
-    const token = jwt.sign({ id: 1, nombre: "Administrador" }, SECRET_KEY, { expiresIn: "1h" });
-    return res.json({ token, nombre: "Administrador" });
-  }
-
-  // Buscar en la base de datos
-  const query = databaseType === 'PostgreSQL' 
-    ? 'SELECT * FROM usuarios WHERE email = $1'
-    : 'SELECT * FROM usuarios WHERE email = ?';
-
-  db.get(query, [email], async (err, user) => {
-    if (err) {
-      console.error("Error en login:", err);
-      return res.status(500).json({ error: "Error del servidor" });
-    }
-    
-    if (!user) {
-      return res.status(400).json({ error: "Usuario no encontrado" });
-    }
-
-    try {
-      // Para desarrollo - contraseña temporal
-      if (password === "happi123") {
-        const token = jwt.sign({ id: user.id, nombre: user.nombre }, SECRET_KEY, { expiresIn: "1h" });
-        return res.json({ token, nombre: user.nombre });
-      }
-
-      const valid = await bcrypt.compare(password, user.password);
-      if (!valid) {
-        return res.status(400).json({ error: "Contraseña incorrecta" });
-      }
-
-      const token = jwt.sign({ id: user.id, nombre: user.nombre }, SECRET_KEY, { expiresIn: "1h" });
-      res.json({ token, nombre: user.nombre });
-    } catch (error) {
-      console.error("Error en autenticación:", error);
-      res.status(500).json({ error: "Error en autenticación" });
-    }
+app.get('/api/database-status', (req, res) => {
+  res.json({ 
+    database: databaseType,
+    status: 'connected',
+    message: `Usando ${databaseType} temporalmente - PostgreSQL en mantenimiento`,
+    timestamp: new Date().toISOString()
   });
 });
 
-// ===============================================================
-//                     OBTENER CATEGORÍAS  
-// ===============================================================
-app.get("/api/categorias", (req, res) => {
-  const query = databaseType === 'PostgreSQL' 
-    ? 'SELECT * FROM categorias ORDER BY nombre'
-    : 'SELECT * FROM categorias ORDER BY nombre';
+// Routes de productos
+app.get('/api/productos', (req, res) => {
+  const query = `
+    SELECT p.*, c.nombre as categoria_nombre 
+    FROM productos p 
+    LEFT JOIN categorias c ON p.categoria_id = c.id 
+    ORDER BY p.nombre
+  `;
 
   db.all(query, (err, rows) => {
     if (err) {
-      console.error("Error obteniendo categorías:", err);
-      return res.status(500).json({ error: "Error obteniendo categorías" });
+      console.error('Error obteniendo productos:', err);
+      return res.status(500).json({ error: 'Error obteniendo productos' });
     }
-    res.json(rows || []);
+    res.json(rows);
   });
 });
 
-// ===============================================================
-//                     OBTENER PRODUCTOS
-// ===============================================================
-app.get("/api/productos", (req, res) => {
-  const query = databaseType === 'PostgreSQL' 
-    ? `SELECT p.*, c.nombre as categoria_nombre 
-       FROM productos p 
-       LEFT JOIN categorias c ON p.categoria_id = c.id 
-       ORDER BY p.nombre`
-    : `SELECT p.*, c.nombre as categoria_nombre 
-       FROM productos p 
-       LEFT JOIN categorias c ON p.categoria_id = c.id 
-       ORDER BY p.nombre`;
+app.post('/api/productos', authenticateToken, (req, res) => {
+  const { nombre, precio, categoria_id, imagen } = req.body;
+
+  if (!nombre || !precio) {
+    return res.status(400).json({ error: 'Nombre y precio son requeridos' });
+  }
+
+  const query = `
+    INSERT INTO productos (nombre, precio, categoria_id, imagen) 
+    VALUES (?, ?, ?, ?)
+  `;
+
+  db.run(query, [nombre, precio, categoria_id || null, imagen || null], function(err) {
+    if (err) {
+      console.error('Error creando producto:', err);
+      return res.status(500).json({ error: 'Error creando producto' });
+    }
+    res.json({ 
+      id: this.lastID,
+      message: 'Producto creado exitosamente'
+    });
+  });
+});
+
+// Routes de categorías
+app.get('/api/categorias', (req, res) => {
+  const query = 'SELECT * FROM categorias ORDER BY nombre';
 
   db.all(query, (err, rows) => {
     if (err) {
-      console.error("Error obteniendo productos:", err);
-      return res.status(500).json({ error: "Error obteniendo productos" });
+      console.error('Error obteniendo categorías:', err);
+      return res.status(500).json({ error: 'Error obteniendo categorías' });
     }
-    res.json(rows || []);
+    res.json(rows);
   });
 });
 
-// ===============================================================
-//                     MANEJO DE ERRORES GLOBAL
-// ===============================================================
+// Routes de ventas
+app.get('/api/ventas', authenticateToken, (req, res) => {
+  const query = `
+    SELECT v.*, COUNT(dv.id) as items 
+    FROM ventas v 
+    LEFT JOIN detalle_venta dv ON v.id = dv.venta_id 
+    GROUP BY v.id 
+    ORDER BY v.fecha DESC
+  `;
+
+  db.all(query, (err, rows) => {
+    if (err) {
+      console.error('Error obteniendo ventas:', err);
+      return res.status(500).json({ error: 'Error obteniendo ventas' });
+    }
+    res.json(rows);
+  });
+});
+
+app.post('/api/ventas', authenticateToken, (req, res) => {
+  const { productos, total } = req.body;
+
+  if (!productos || !Array.isArray(productos) || productos.length === 0) {
+    return res.status(400).json({ error: 'Productos son requeridos' });
+  }
+
+  // Iniciar transacción
+  db.serialize(() => {
+    // Insertar venta
+    db.run('INSERT INTO ventas (total) VALUES (?)', [total], function(err) {
+      if (err) {
+        console.error('Error creando venta:', err);
+        return res.status(500).json({ error: 'Error creando venta' });
+      }
+
+      const ventaId = this.lastID;
+      let detallesInsertados = 0;
+
+      // Insertar detalles de venta
+      productos.forEach(producto => {
+        const subtotal = producto.precio * producto.cantidad;
+        
+        db.run(
+          'INSERT INTO detalle_venta (venta_id, producto_id, cantidad, precio) VALUES (?, ?, ?, ?)',
+          [ventaId, producto.id, producto.cantidad, producto.precio],
+          function(err) {
+            if (err) {
+              console.error('Error insertando detalle:', err);
+            } else {
+              detallesInsertados++;
+            }
+
+            // Cuando todos los detalles se hayan procesado
+            if (detallesInsertados === productos.length) {
+              res.json({
+                id: ventaId,
+                message: 'Venta registrada exitosamente',
+                total_venta: total,
+                items: productos.length
+              });
+            }
+          }
+        );
+      });
+    });
+  });
+});
+
+// Route para obtener detalles de una venta específica
+app.get('/api/ventas/:id', authenticateToken, (req, res) => {
+  const ventaId = req.params.id;
+
+  const query = `
+    SELECT dv.*, p.nombre as producto_nombre 
+    FROM detalle_venta dv 
+    JOIN productos p ON dv.producto_id = p.id 
+    WHERE dv.venta_id = ?
+  `;
+
+  db.all(query, [ventaId], (err, rows) => {
+    if (err) {
+      console.error('Error obteniendo detalle de venta:', err);
+      return res.status(500).json({ error: 'Error obteniendo detalle de venta' });
+    }
+    res.json(rows);
+  });
+});
+
+// Route para el dashboard
+app.get('/api/dashboard', authenticateToken, (req, res) => {
+  const queries = {
+    totalVentas: 'SELECT COUNT(*) as count FROM ventas',
+    totalProductos: 'SELECT COUNT(*) as count FROM productos',
+    ventasHoy: `SELECT COUNT(*) as count FROM ventas WHERE DATE(fecha) = DATE('now')`,
+    totalRecaudado: 'SELECT COALESCE(SUM(total), 0) as total FROM ventas'
+  };
+
+  const results = {};
+  let queriesCompleted = 0;
+
+  Object.keys(queries).forEach(key => {
+    db.get(queries[key], (err, row) => {
+      if (err) {
+        console.error(`Error en query ${key}:`, err);
+        results[key] = key === 'totalRecaudado' ? 0 : 0;
+      } else {
+        results[key] = row.count !== undefined ? row.count : row.total;
+      }
+
+      queriesCompleted++;
+      
+      if (queriesCompleted === Object.keys(queries).length) {
+        res.json(results);
+      }
+    });
+  });
+});
+
+// Ruta para servir el frontend
+app.get('/', (req, res) => {
+  res.sendFile(process.cwd() + '/public/index.html');
+});
+
+// Manejo de errores 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint no encontrado' });
+});
+
+// Manejo de errores global
 app.use((err, req, res, next) => {
-  console.error('💥 Error global:', err.stack);
-  res.status(500).json({ 
-    error: 'Algo salió mal en el servidor',
-    ...(process.env.NODE_ENV === 'development' && { details: err.message })
-  });
+  console.error('Error global:', err);
+  res.status(500).json({ error: 'Error interno del servidor' });
 });
 
-// Ruta 404 para APIs no encontradas
-app.all("/api/*", (req, res) => {
-  res.status(404).json({ 
-    error: "Endpoint de API no encontrado",
-    path: req.path,
-    method: req.method,
-    availableEndpoints: [
-      "GET /",
-      "GET /api/health", 
-      "GET /api/database-status",
-      "GET /api/test",
-      "POST /api/login",
-      "GET /api/categorias",
-      "GET /api/productos",
-      "GET /api/dashboard/hoy"
-    ]
-  });
-});
-
-// ===============================================================
-//                        INICIAR SERVIDOR
-// ===============================================================
-const PORT = process.env.PORT || 4000;
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🗄️  Base de datos: ${databaseType}`);
+// Iniciar servidor
+app.listen(PORT, () => {
+  console.log(`🎉 Servidor Happi Helados ejecutándose en puerto ${PORT}`);
+  console.log(`📊 Base de datos: ${databaseType}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📊 DB Status: http://localhost:${PORT}/api/database-status`);
-  console.log(`🍦 Categorías: http://localhost:${PORT}/api/categorias`);
+  console.log(`🌐 Frontend: http://localhost:${PORT}/`);
 });
+
+export default app;
