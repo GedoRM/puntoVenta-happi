@@ -1,39 +1,48 @@
 // backend/db.js
+import sqlite3 from "sqlite3";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 let db;
+let usingPostgreSQL = false;
 
-if (process.env.DATABASE_URL) {
-  // Usar PostgreSQL en producción
-  console.log('📊 Usando PostgreSQL en Aiven');
-  import('./postgres-db.js').then(module => {
-    db = module.default;
-  }).catch(err => {
-    console.error('Error cargando PostgreSQL, usando SQLite:', err);
-    db = setupSQLite();
-  });
-} else {
-  // Usar SQLite en desarrollo
-  console.log('📊 Usando SQLite local');
-  db = setupSQLite();
-}
-
+// Función para configurar SQLite (fallback)
 function setupSQLite() {
-  const sqlite3 = require("sqlite3").verbose();
-  const path = require("path");
-  const { fileURLToPath } = require("url");
-  
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
+  console.log('📊 Usando SQLite como base de datos');
   
   const dbPath = path.join(__dirname, "pos.db");
-  const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) console.error("Error abriendo SQLite:", err.message);
-    else {
+  const sqliteDB = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error("Error abriendo SQLite:", err.message);
+    } else {
       console.log("✅ Conectado a SQLite:", dbPath);
-      require('./db-initializer.js'); // Tu inicializador actual
+      // Tu inicialización de SQLite aquí
     }
   });
   
-  return db;
+  return sqliteDB;
 }
 
-export default db;
+// Intentar usar PostgreSQL si está configurado
+if (process.env.DATABASE_URL) {
+  console.log('🔄 Intentando conectar a PostgreSQL...');
+  
+  import('./postgres-db.js')
+    .then(module => {
+      db = module.default;
+      usingPostgreSQL = true;
+      console.log('🎯 PostgreSQL configurado como base de datos principal');
+    })
+    .catch(err => {
+      console.error('❌ Error cargando PostgreSQL, usando SQLite:', err.message);
+      db = setupSQLite();
+    });
+} else {
+  db = setupSQLite();
+}
+
+// Exportar la base de datos y un indicador de qué estamos usando
+export { db as default, usingPostgreSQL };

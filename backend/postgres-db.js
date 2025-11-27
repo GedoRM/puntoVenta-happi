@@ -2,24 +2,53 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 
+// Configuración para Aiven con SSL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false
-  }
+    rejectUnauthorized: false, // Esto es importante para Aiven
+    ca: process.env.SSL_CERT || undefined
+  },
+  // Configuraciones adicionales para mejor rendimiento
+  max: 20, // máximo de conexiones en el pool
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
+
+// Función para probar la conexión
+async function testConnection() {
+  try {
+    const client = await pool.connect();
+    const result = await client.query('SELECT version(), NOW() as current_time');
+    console.log('✅ Conectado a PostgreSQL en Aiven:');
+    console.log('   📅', result.rows[0].current_time);
+    console.log('   🐘', result.rows[0].version.split(',')[0]);
+    client.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Error conectando a PostgreSQL:', error.message);
+    return false;
+  }
+}
 
 // Función para inicializar la base de datos con TU estructura
 async function initializeDatabase() {
   try {
+    const connectionOk = await testConnection();
+    if (!connectionOk) {
+      throw new Error('No se pudo conectar a la base de datos');
+    }
+
     const client = await pool.connect();
-    console.log('✅ Conectado a PostgreSQL en Aiven');
+    
+    console.log('🔄 Creando tablas en PostgreSQL...');
     
     // Crear tablas EXACTAMENTE como en tu SQLite
     await client.query(`
       CREATE TABLE IF NOT EXISTS categorias (
         id SERIAL PRIMARY KEY,
-        nombre VARCHAR(255) NOT NULL UNIQUE
+        nombre VARCHAR(255) NOT NULL UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -30,6 +59,7 @@ async function initializeDatabase() {
         nombre VARCHAR(255) NOT NULL,
         precio DECIMAL(10,2) NOT NULL,
         imagen TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (categoria_id) REFERENCES categorias(id)
       )
     `);
@@ -39,7 +69,8 @@ async function initializeDatabase() {
         id SERIAL PRIMARY KEY,
         nombre VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL
+        password VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -58,6 +89,7 @@ async function initializeDatabase() {
         producto_id INTEGER NOT NULL,
         cantidad INTEGER NOT NULL DEFAULT 1,
         precio DECIMAL(10,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (venta_id) REFERENCES ventas(id),
         FOREIGN KEY (producto_id) REFERENCES productos(id)
       )
@@ -70,12 +102,15 @@ async function initializeDatabase() {
         producto_id VARCHAR(255),
         cantidad INTEGER,
         subtotal DECIMAL(10,2),
-        FOREIGN KEY (venta_id) REFERENCES ventas(id),
-        FOREIGN KEY (producto_id) REFERENCES productos(id)
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
+    console.log('✅ Tablas creadas en PostgreSQL');
+
     // Insertar TUS datos exactos
+    console.log('🔄 Insertando datos iniciales...');
+    
     await client.query(`
       INSERT INTO categorias (id, nombre) 
       VALUES 
@@ -109,13 +144,27 @@ async function initializeDatabase() {
     `);
 
     console.log('✅ Base de datos PostgreSQL inicializada con datos de Happi');
+    
+    // Verificar datos insertados
+    const categoriasCount = await client.query('SELECT COUNT(*) FROM categorias');
+    const productosCount = await client.query('SELECT COUNT(*) FROM productos');
+    const usuariosCount = await client.query('SELECT COUNT(*) FROM usuarios');
+    
+    console.log('📊 Datos insertados:');
+    console.log('   🏷️  Categorías:', categoriasCount.rows[0].count);
+    console.log('   🍦 Productos:', productosCount.rows[0].count);
+    console.log('   👤 Usuarios:', usuariosCount.rows[0].count);
+    
     client.release();
   } catch (error) {
-    console.error('❌ Error inicializando PostgreSQL:', error);
+    console.error('❌ Error inicializando PostgreSQL:', error.message);
+    // No lances el error, deja que la app use SQLite como fallback
   }
 }
 
-// Ejecutar inicialización
-initializeDatabase();
+// Ejecutar inicialización solo si estamos en producción con DATABASE_URL
+if (process.env.DATABASE_URL) {
+  initializeDatabase();
+}
 
 export default pool;

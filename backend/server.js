@@ -529,30 +529,46 @@ app.all("/api/*", (req, res) => {
 });
 
 // Ruta para validar conexion SQL
-app.get("/api/db-check", async (req, res) => {
+app.get("/api/database-info", async (req, res) => {
   try {
-    if (process.env.DATABASE_URL) {
-      // Probar PostgreSQL
-      const postgres = await import('./postgres-db.js');
-      const result = await postgres.default.query('SELECT version()');
+    if (usingPostgreSQL) {
+      const client = await db.connect();
+      const version = await client.query('SELECT version()');
+      const stats = await client.query(`
+        SELECT 
+          (SELECT COUNT(*) FROM categorias) as categorias,
+          (SELECT COUNT(*) FROM productos) as productos,
+          (SELECT COUNT(*) FROM usuarios) as usuarios,
+          (SELECT COUNT(*) FROM ventas) as ventas
+      `);
+      client.release();
       
       res.json({
         database: "PostgreSQL",
-        status: "✅ Conectado correctamente",
-        version: result.rows[0].version,
-        connection: "Aiven"
+        status: "✅ Conectado",
+        version: version.rows[0].version.split(',')[0],
+        stats: stats.rows[0]
       });
     } else {
-      // Usar SQLite
-      db.get("SELECT sqlite_version() as version", (err, row) => {
+      // SQLite
+      db.get(`
+        SELECT 
+          (SELECT COUNT(*) FROM categorias) as categorias,
+          (SELECT COUNT(*) FROM productos) as productos,
+          (SELECT COUNT(*) FROM usuarios) as usuarios,
+          (SELECT COUNT(*) FROM ventas) as ventas
+      `, (err, row) => {
         if (err) {
-          res.json({ database: "SQLite", status: "❌ Error", error: err.message });
+          res.json({ 
+            database: "SQLite", 
+            status: "❌ Error",
+            error: err.message 
+          });
         } else {
           res.json({ 
             database: "SQLite", 
-            status: "✅ Conectado correctamente",
-            version: row.version,
-            connection: "Local"
+            status: "✅ Conectado",
+            stats: row
           });
         }
       });
