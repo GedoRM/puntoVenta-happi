@@ -1,0 +1,5 @@
+﻿# Dependencias
+node_modules/
+*.db
+.env
+*.log
