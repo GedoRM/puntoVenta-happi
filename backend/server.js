@@ -1,4 +1,3 @@
-// backend/server.js
 import express from 'express';
 import cors from 'cors';
 import db, { databaseType } from './db.js';
@@ -8,17 +7,29 @@ import jwt from 'jsonwebtoken';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors());
+// Middleware CORS ACTUALIZADO para Netlify
+app.use(cors({
+  origin: [
+    'https://puntoventahappi.netlify.app',
+    'https://puntoventa-happi.onrender.com',
+    'http://localhost:3000', 
+    'http://localhost:5173'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
+
 app.use(express.json());
-// REMOVEMOS la línea de static files por ahora
-// app.use(express.static('public'));
+
+app.options('*', cors());
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'happi-helados-secret-temporal';
 
-console.log(`🚀 Iniciando Servidor Happi Helados (Solo API)...`);
+console.log(`🚀 Iniciando Servidor Happi Helados...`);
 console.log(`📊 Usando base de datos: ${databaseType}`);
+console.log(`🌐 CORS configurado para: https://puntoventahappi.netlify.app`);
 
 // Middleware de autenticación
 const authenticateToken = (req, res, next) => {
@@ -307,7 +318,8 @@ app.listen(PORT, () => {
   console.log(`🎉 Servidor Happi Helados ejecutándose en puerto ${PORT}`);
   console.log(`📊 Base de datos: ${databaseType}`);
   console.log(`🔗 Health check: https://puntoventa-happi.onrender.com/api/health`);
-  console.log(`🌐 API Root: https://puntoventa-happi.onrender.com/`);
+  console.log(`🌐 Frontend: https://puntoventahappi.netlify.app`);
+  console.log(`🔒 CORS configurado para Netlify`);
 });
 
 export default app;
