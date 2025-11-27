@@ -11,12 +11,13 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+// REMOVEMOS la línea de static files por ahora
+// app.use(express.static('public'));
 
-// JWT Secret (usar variable de entorno o un valor por defecto)
+// JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'happi-helados-secret-temporal';
 
-console.log(`🚀 Iniciando Servidor Happi Helados...`);
+console.log(`🚀 Iniciando Servidor Happi Helados (Solo API)...`);
 console.log(`📊 Usando base de datos: ${databaseType}`);
 
 // Middleware de autenticación
@@ -46,7 +47,6 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Email y contraseña requeridos' });
     }
 
-    // Buscar usuario en la base de datos
     const query = 'SELECT * FROM usuarios WHERE email = ?';
     
     db.get(query, [email], async (err, user) => {
@@ -59,13 +59,11 @@ app.post('/api/login', async (req, res) => {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
-      // Verificar contraseña
       const validPassword = await bcrypt.compare(password, user.password);
       if (!validPassword) {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
-      // Generar token
       const token = jwt.sign(
         { id: user.id, email: user.email, nombre: user.nombre },
         JWT_SECRET,
@@ -102,8 +100,25 @@ app.get('/api/database-status', (req, res) => {
   res.json({ 
     database: databaseType,
     status: 'connected',
-    message: `Usando ${databaseType} temporalmente - PostgreSQL en mantenimiento`,
+    message: `Usando ${databaseType} temporalmente`,
     timestamp: new Date().toISOString()
+  });
+});
+
+// Ruta raíz - Mensaje de bienvenida
+app.get('/', (req, res) => {
+  res.json({
+    message: '🚀 API Happi Helados funcionando correctamente',
+    database: databaseType,
+    endpoints: {
+      health: '/api/health',
+      database: '/api/database-status',
+      login: '/api/login (POST)',
+      productos: '/api/productos',
+      categorias: '/api/categorias',
+      ventas: '/api/ventas'
+    },
+    frontend: 'El frontend está separado del backend'
   });
 });
 
@@ -188,9 +203,7 @@ app.post('/api/ventas', authenticateToken, (req, res) => {
     return res.status(400).json({ error: 'Productos son requeridos' });
   }
 
-  // Iniciar transacción
   db.serialize(() => {
-    // Insertar venta
     db.run('INSERT INTO ventas (total) VALUES (?)', [total], function(err) {
       if (err) {
         console.error('Error creando venta:', err);
@@ -200,7 +213,6 @@ app.post('/api/ventas', authenticateToken, (req, res) => {
       const ventaId = this.lastID;
       let detallesInsertados = 0;
 
-      // Insertar detalles de venta
       productos.forEach(producto => {
         const subtotal = producto.precio * producto.cantidad;
         
@@ -214,7 +226,6 @@ app.post('/api/ventas', authenticateToken, (req, res) => {
               detallesInsertados++;
             }
 
-            // Cuando todos los detalles se hayan procesado
             if (detallesInsertados === productos.length) {
               res.json({
                 id: ventaId,
@@ -230,7 +241,7 @@ app.post('/api/ventas', authenticateToken, (req, res) => {
   });
 });
 
-// Route para obtener detalles de una venta específica
+// Route para detalles de venta
 app.get('/api/ventas/:id', authenticateToken, (req, res) => {
   const ventaId = req.params.id;
 
@@ -250,7 +261,7 @@ app.get('/api/ventas/:id', authenticateToken, (req, res) => {
   });
 });
 
-// Route para el dashboard
+// Route para dashboard
 app.get('/api/dashboard', authenticateToken, (req, res) => {
   const queries = {
     totalVentas: 'SELECT COUNT(*) as count FROM ventas',
@@ -280,11 +291,6 @@ app.get('/api/dashboard', authenticateToken, (req, res) => {
   });
 });
 
-// Ruta para servir el frontend
-app.get('/', (req, res) => {
-  res.sendFile(process.cwd() + '/public/index.html');
-});
-
 // Manejo de errores 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Endpoint no encontrado' });
@@ -300,8 +306,8 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🎉 Servidor Happi Helados ejecutándose en puerto ${PORT}`);
   console.log(`📊 Base de datos: ${databaseType}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🌐 Frontend: http://localhost:${PORT}/`);
+  console.log(`🔗 Health check: https://puntoventa-happi.onrender.com/api/health`);
+  console.log(`🌐 API Root: https://puntoventa-happi.onrender.com/`);
 });
 
 export default app;
