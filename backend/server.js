@@ -106,7 +106,6 @@ app.get("/api/db-status", (req, res) => {
 });
 
 // Activar WAL para concurrencia
-db.run("PRAGMA journal_mode = WAL;");
 
 // ===============================================================
 //                     LOGIN (ACTUALIZADO PARA TU USUARIO)
