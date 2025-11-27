@@ -24,7 +24,7 @@ function Login({ onLogin }) {
     }
 
     try {
-      const res = await axios.post("http://localhost:4000/api/login", { email, password });
+      const res = await axios.post("https://puntoventa-happi.onrender.com/api/login", { email, password });
 
       if (res.data.token) {
         // Enviamos un objeto con nombre y token a App.js
