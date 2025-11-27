@@ -18,7 +18,9 @@ const sslConfig = {
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: false,
+  ssl: {
+    rejectUnauthorized: false  // ← ESTO ES CLAVE PARA AIVEN
+  },
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
