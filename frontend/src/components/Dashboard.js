@@ -53,6 +53,18 @@ function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+    // Función para calcular la altura máxima de las barras
+  const calcularMaxVentas = () => {
+    if (ventasSemana.length === 0) return 100;
+    return Math.max(...ventasSemana.map(v => v.total_ventas));
+  };
+
+  // Función para formatear fecha
+  const formatearFecha = (fechaStr) => {
+    const fecha = new Date(fechaStr);
+    return fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
+  };
+
   // Detectar si es móvil
   useEffect(() => {
     const checkScreenSize = () => {
