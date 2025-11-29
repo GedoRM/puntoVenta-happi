@@ -65,13 +65,17 @@ function Dashboard() {
     nombre: '',
     mensaje: ''
   });
-    // Nuevos estados para edición y filtrado
+  // Nuevos estados para edición y filtrado
   const [editandoCategoria, setEditandoCategoria] = useState(null);
   const [editandoProducto, setEditandoProducto] = useState(null);
   const [filtrosProductos, setFiltrosProductos] = useState({
     categoria: '',
     busqueda: ''
   });
+
+  const [mostrarNuevaCategoria, setMostrarNuevaCategoria] = useState(false);
+  const [mostrarNuevoProducto, setMostrarNuevoProducto] = useState(false);
+  const [mostrarCategoriasExistentes, setMostrarCategoriasExistentes] = useState(false);
 
   // Detectar si es móvil
   useEffect(() => {
@@ -472,103 +476,103 @@ function Dashboard() {
   };
 
   // 📌 Funciones de edición
-const iniciarEdicionCategoria = (categoria) => {
-  setEditandoCategoria({
-    id: categoria.id,
-    nombre: categoria.nombre
-  });
-};
-
-const cancelarEdicionCategoria = () => {
-  setEditandoCategoria(null);
-};
-
-const guardarCategoria = async () => {
-  if (!editandoCategoria.nombre.trim()) {
-    setToast({ mensaje: "❌ El nombre de la categoría no puede estar vacío", tipo: "error" });
-    return;
-  }
-
-  try {
-    const res = await axios.put(`${API_BASE_URL}/api/categorias/${editandoCategoria.id}`, {
-      nombre: editandoCategoria.nombre
+  const iniciarEdicionCategoria = (categoria) => {
+    setEditandoCategoria({
+      id: categoria.id,
+      nombre: categoria.nombre
     });
-    
-    setToast({ mensaje: `✅ ${res.data.message}`, tipo: "success" });
+  };
+
+  const cancelarEdicionCategoria = () => {
     setEditandoCategoria(null);
-    cargarCategorias();
-    cargarProductosDetallados();
-    
-  } catch (err) {
-    console.error("Error actualizando categoría:", err);
-    const msg = err.response?.data?.error || "Error actualizando categoría";
-    setToast({ mensaje: `❌ ${msg}`, tipo: "error" });
-  }
-};
+  };
 
-const iniciarEdicionProducto = (producto) => {
-  setEditandoProducto({
-    id: producto.id,
-    nombre: producto.nombre,
-    precio: producto.precio,
-    categoria_id: producto.categoria_id || ''
-  });
-};
+  const guardarCategoria = async () => {
+    if (!editandoCategoria.nombre.trim()) {
+      setToast({ mensaje: "❌ El nombre de la categoría no puede estar vacío", tipo: "error" });
+      return;
+    }
 
-const cancelarEdicionProducto = () => {
-  setEditandoProducto(null);
-};
+    try {
+      const res = await axios.put(`${API_BASE_URL}/api/categorias/${editandoCategoria.id}`, {
+        nombre: editandoCategoria.nombre
+      });
 
-const guardarProducto = async () => {
-  if (!editandoProducto.nombre.trim() || !editandoProducto.precio) {
-    setToast({ mensaje: "❌ Nombre y precio son requeridos", tipo: "error" });
-    return;
-  }
+      setToast({ mensaje: `✅ ${res.data.message}`, tipo: "success" });
+      setEditandoCategoria(null);
+      cargarCategorias();
+      cargarProductosDetallados();
 
-  try {
-    const res = await axios.put(`${API_BASE_URL}/api/productos/${editandoProducto.id}`, {
-      nombre: editandoProducto.nombre,
-      precio: editandoProducto.precio,
-      categoria_id: editandoProducto.categoria_id || null
+    } catch (err) {
+      console.error("Error actualizando categoría:", err);
+      const msg = err.response?.data?.error || "Error actualizando categoría";
+      setToast({ mensaje: `❌ ${msg}`, tipo: "error" });
+    }
+  };
+
+  const iniciarEdicionProducto = (producto) => {
+    setEditandoProducto({
+      id: producto.id,
+      nombre: producto.nombre,
+      precio: producto.precio,
+      categoria_id: producto.categoria_id || ''
     });
-    
-    setToast({ mensaje: `✅ ${res.data.message}`, tipo: "success" });
+  };
+
+  const cancelarEdicionProducto = () => {
     setEditandoProducto(null);
-    cargarProductosDetallados();
-    
-  } catch (err) {
-    console.error("Error actualizando producto:", err);
-    const msg = err.response?.data?.error || "Error actualizando producto";
-    setToast({ mensaje: `❌ ${msg}`, tipo: "error" });
-  }
-};
+  };
 
-// 📌 Funciones de filtrado
-const handleFiltroChange = (campo, valor) => {
-  setFiltrosProductos(prev => ({
-    ...prev,
-    [campo]: valor
-  }));
-};
+  const guardarProducto = async () => {
+    if (!editandoProducto.nombre.trim() || !editandoProducto.precio) {
+      setToast({ mensaje: "❌ Nombre y precio son requeridos", tipo: "error" });
+      return;
+    }
 
-const limpiarFiltros = () => {
-  setFiltrosProductos({
-    categoria: '',
-    busqueda: ''
+    try {
+      const res = await axios.put(`${API_BASE_URL}/api/productos/${editandoProducto.id}`, {
+        nombre: editandoProducto.nombre,
+        precio: editandoProducto.precio,
+        categoria_id: editandoProducto.categoria_id || null
+      });
+
+      setToast({ mensaje: `✅ ${res.data.message}`, tipo: "success" });
+      setEditandoProducto(null);
+      cargarProductosDetallados();
+
+    } catch (err) {
+      console.error("Error actualizando producto:", err);
+      const msg = err.response?.data?.error || "Error actualizando producto";
+      setToast({ mensaje: `❌ ${msg}`, tipo: "error" });
+    }
+  };
+
+  // 📌 Funciones de filtrado
+  const handleFiltroChange = (campo, valor) => {
+    setFiltrosProductos(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
+  };
+
+  const limpiarFiltros = () => {
+    setFiltrosProductos({
+      categoria: '',
+      busqueda: ''
+    });
+  };
+
+  // 📌 Filtrar productos
+  const productosFiltrados = productosDetallados.filter(producto => {
+    const coincideCategoria = !filtrosProductos.categoria ||
+      producto.categoria_id == filtrosProductos.categoria;
+
+    const coincideBusqueda = !filtrosProductos.busqueda ||
+      producto.nombre.toLowerCase().includes(filtrosProductos.busqueda.toLowerCase()) ||
+      (producto.categoria_nombre && producto.categoria_nombre.toLowerCase().includes(filtrosProductos.busqueda.toLowerCase()));
+
+    return coincideCategoria && coincideBusqueda;
   });
-};
-
-// 📌 Filtrar productos
-const productosFiltrados = productosDetallados.filter(producto => {
-  const coincideCategoria = !filtrosProductos.categoria || 
-    producto.categoria_id == filtrosProductos.categoria;
-  
-  const coincideBusqueda = !filtrosProductos.busqueda || 
-    producto.nombre.toLowerCase().includes(filtrosProductos.busqueda.toLowerCase()) ||
-    (producto.categoria_nombre && producto.categoria_nombre.toLowerCase().includes(filtrosProductos.busqueda.toLowerCase()));
-  
-  return coincideCategoria && coincideBusqueda;
-});
 
   return (
     <div className="layout">
@@ -875,8 +879,29 @@ const productosFiltrados = productosDetallados.filter(producto => {
           <div className="historial-card management-container">
             <h3 className="historial-title">🏷️ Administrar Categorías y Productos</h3>
 
-            
-            {/* FILTROS DE PRODUCTOS */}
+            {/* BOTONES DE ACCIÓN PRINCIPALES */}
+            <div className="management-actions">
+              <button
+                className={`action-btn ${mostrarNuevaCategoria ? 'active' : ''}`}
+                onClick={() => setMostrarNuevaCategoria(!mostrarNuevaCategoria)}
+              >
+                ➕ Nueva Categoría
+              </button>
+              <button
+                className={`action-btn ${mostrarNuevoProducto ? 'active' : ''}`}
+                onClick={() => setMostrarNuevoProducto(!mostrarNuevoProducto)}
+              >
+                📦 Nuevo Producto
+              </button>
+              <button
+                className={`action-btn ${mostrarCategoriasExistentes ? 'active' : ''}`}
+                onClick={() => setMostrarCategoriasExistentes(!mostrarCategoriasExistentes)}
+              >
+                📂 Ver Categorías
+              </button>
+            </div>
+
+            {/* FILTROS DE PRODUCTOS - Siempre visible */}
             <div className="filters-section">
               <h4 style={{ marginBottom: '15px', color: 'var(--color-primary)' }}>🔍 Filtros de Búsqueda</h4>
               <div className="filters-row">
@@ -912,7 +937,7 @@ const productosFiltrados = productosDetallados.filter(producto => {
               </div>
             </div>
 
-            {/* LISTA DE PRODUCTOS EXISTENTES */}
+            {/* LISTA DE PRODUCTOS EXISTENTES - Siempre visible */}
             <div className="products-section">
               <h4>📦 Productos Existentes ({productosFiltrados.length})</h4>
 
@@ -1040,135 +1065,169 @@ const productosFiltrados = productosDetallados.filter(producto => {
                 </div>
               )}
             </div>
-            {/* NUEVA CATEGORÍA */}
-            <div className="filtro-container modulo-productos management-form">
-              <div className="filtro-item">
-                <label>Nueva categoría:</label>
-                <input
-                  type="text"
-                  value={nuevaCategoria}
-                  onChange={(e) => setNuevaCategoria(e.target.value)}
-                  placeholder="Nombre de la categoría"
-                />
-              </div>
-              <button onClick={agregarCategoria}>Agregar categoría</button>
-            </div>
 
-            {/* NUEVO PRODUCTO */}
-            <div className="filtro-container modulo-productos management-form">
-              <div className="filtro-item">
-                <label>Nombre producto:</label>
-                <input
-                  type="text"
-                  value={nuevoProducto.nombre}
-                  onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
-                  placeholder="Nombre del producto"
-                />
+            {/* NUEVA CATEGORÍA - Se muestra al hacer click */}
+            {mostrarNuevaCategoria && (
+              <div className="filtro-container modulo-productos management-form">
+                <div className="form-header">
+                  <h4>➕ Nueva Categoría</h4>
+                  <button
+                    className="btn-close"
+                    onClick={() => setMostrarNuevaCategoria(false)}
+                  >
+                    ✖️
+                  </button>
+                </div>
+                <div className="filtro-item">
+                  <label>Nombre de la categoría:</label>
+                  <input
+                    type="text"
+                    value={nuevaCategoria}
+                    onChange={(e) => setNuevaCategoria(e.target.value)}
+                    placeholder="Ej: Bebidas, Snacks, Postres..."
+                  />
+                </div>
+                <button onClick={agregarCategoria}>Agregar categoría</button>
               </div>
-              <div className="filtro-item">
-                <label>Precio:</label>
-                <input
-                  type="number"
-                  value={nuevoProducto.precio}
-                  onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                />
-              </div>
-              <div className="filtro-item">
-                <label>Categoría:</label>
-                <select
-                  value={nuevoProducto.categoria_id}
-                  onChange={(e) => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })}
-                >
-                  <option value="">Selecciona categoría</option>
-                  {categorias.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                  ))}
-                </select>
-              </div>
-              <button onClick={agregarProducto}>Agregar producto</button>
-            </div>
+            )}
 
-            {/* LISTA DE CATEGORÍAS EXISTENTES */}
-            <div className="categories-section">
-              <h4>📂 Categorías Existentes</h4>
-              {categorias.length === 0 ? (
-                <p className="empty-state">No hay categorías creadas</p>
-              ) : (
-                <div className="categories-list">
-                  {categorias.map(categoria => {
-                    const productosEnCategoria = obtenerProductosPorCategoria(categoria.id);
+            {/* NUEVO PRODUCTO - Se muestra al hacer click */}
+            {mostrarNuevoProducto && (
+              <div className="filtro-container modulo-productos management-form">
+                <div className="form-header">
+                  <h4>📦 Nuevo Producto</h4>
+                  <button
+                    className="btn-close"
+                    onClick={() => setMostrarNuevoProducto(false)}
+                  >
+                    ✖️
+                  </button>
+                </div>
+                <div className="filtro-item">
+                  <label>Nombre producto:</label>
+                  <input
+                    type="text"
+                    value={nuevoProducto.nombre}
+                    onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
+                    placeholder="Nombre del producto"
+                  />
+                </div>
+                <div className="filtro-item">
+                  <label>Precio:</label>
+                  <input
+                    type="number"
+                    value={nuevoProducto.precio}
+                    onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                  />
+                </div>
+                <div className="filtro-item">
+                  <label>Categoría:</label>
+                  <select
+                    value={nuevoProducto.categoria_id}
+                    onChange={(e) => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })}
+                  >
+                    <option value="">Selecciona categoría</option>
+                    {categorias.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <button onClick={agregarProducto}>Agregar producto</button>
+              </div>
+            )}
 
-                    if (editandoCategoria?.id === categoria.id) {
-                      return (
-                        <div key={categoria.id} className="category-item editing">
-                          <div className="edit-form">
-                            <input
-                              type="text"
-                              value={editandoCategoria.nombre}
-                              onChange={(e) => setEditandoCategoria(prev => ({
-                                ...prev,
-                                nombre: e.target.value
-                              }))}
-                              placeholder="Nombre de la categoría"
-                            />
-                            <div className="edit-form-actions">
-                              <button
-                                className="btn-save"
-                                onClick={guardarCategoria}
-                              >
-                                💾 Guardar
-                              </button>
-                              <button
-                                className="btn-cancel"
-                                onClick={cancelarEdicionCategoria}
-                              >
-                                ✖️ Cancelar
-                              </button>
+            {/* LISTA DE CATEGORÍAS EXISTENTES - Se muestra al hacer click */}
+            {mostrarCategoriasExistentes && (
+              <div className="categories-section">
+                <div className="form-header">
+                  <h4>📂 Categorías Existentes</h4>
+                  <button
+                    className="btn-close"
+                    onClick={() => setMostrarCategoriasExistentes(false)}
+                  >
+                    ✖️
+                  </button>
+                </div>
+                {categorias.length === 0 ? (
+                  <p className="empty-state">No hay categorías creadas</p>
+                ) : (
+                  <div className="categories-list">
+                    {categorias.map(categoria => {
+                      const productosEnCategoria = obtenerProductosPorCategoria(categoria.id);
+
+                      if (editandoCategoria?.id === categoria.id) {
+                        return (
+                          <div key={categoria.id} className="category-item editing">
+                            <div className="edit-form">
+                              <input
+                                type="text"
+                                value={editandoCategoria.nombre}
+                                onChange={(e) => setEditandoCategoria(prev => ({
+                                  ...prev,
+                                  nombre: e.target.value
+                                }))}
+                                placeholder="Nombre de la categoría"
+                              />
+                              <div className="edit-form-actions">
+                                <button
+                                  className="btn-save"
+                                  onClick={guardarCategoria}
+                                >
+                                  💾 Guardar
+                                </button>
+                                <button
+                                  className="btn-cancel"
+                                  onClick={cancelarEdicionCategoria}
+                                >
+                                  ✖️ Cancelar
+                                </button>
+                              </div>
                             </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={categoria.id} className="category-item">
+                          <div className="category-info">
+                            <strong>{categoria.nombre}</strong>
+                            <div className="category-count">
+                              {productosEnCategoria} productos
+                            </div>
+                          </div>
+                          <div>
+                            <button
+                              onClick={() => iniciarEdicionCategoria(categoria)}
+                              className="btn-edit"
+                              title="Editar categoría"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => abrirModalEliminar(
+                                'categoria',
+                                categoria.id,
+                                categoria.nombre,
+                                `${productosEnCategoria}`
+                              )}
+                              className="btn-delete-category"
+                              title="Eliminar categoría y todos sus productos"
+                            >
+                              🗑️
+                            </button>
                           </div>
                         </div>
                       );
-                    }
-
-                    return (
-                      <div key={categoria.id} className="category-item">
-                        <div className="category-info">
-                          <strong>{categoria.nombre}</strong>
-                          <div className="category-count">
-                            {productosEnCategoria} productos
-                          </div>
-                        </div>
-                        <div>
-                          <button
-                            onClick={() => iniciarEdicionCategoria(categoria)}
-                            className="btn-edit"
-                            title="Editar categoría"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => abrirModalEliminar(
-                              'categoria',
-                              categoria.id,
-                              categoria.nombre,
-                              `${productosEnCategoria}`
-                            )}
-                            className="btn-delete-category"
-                            title="Eliminar categoría y todos sus productos"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
         )}
       </div>
     </div>

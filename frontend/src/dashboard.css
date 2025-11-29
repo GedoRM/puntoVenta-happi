@@ -1301,3 +1301,99 @@
     padding: 8px;
   }
 }
+
+/* ========================================================= */
+/* 🎯 BOTONES DE ACCIÓN PRINCIPALES */
+/* ========================================================= */
+
+.management-actions {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  background: #ffd965;
+  color: #333;
+  border: 2px solid #f4e57d;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-btn:hover {
+  background: #d96b20;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.action-btn.active {
+  background: #d96b20;
+  color: white;
+  border-color: #d96b20;
+}
+
+/* ========================================================= */
+/* 🎯 ENCABEZADOS DE FORMULARIOS */
+/* ========================================================= */
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f4e57d;
+}
+
+.form-header h4 {
+  color: #d96b20;
+  margin: 0;
+}
+
+.btn-close {
+  background: #666;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.btn-close:hover {
+  background: #ff4444;
+  transform: scale(1.1);
+}
+
+/* ========================================================= */
+/* 🎯 MEJORAS RESPONSIVE */
+/* ========================================================= */
+
+@media (max-width: 768px) {
+  .management-actions {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .form-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .form-header h4 {
+    font-size: 16px;
+  }
+}
