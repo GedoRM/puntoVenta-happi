@@ -95,57 +95,6 @@
   color: #333;
 }
 
-/* ========================================================= */
-/* 📊 DASHBOARD TABLE - CORREGIDO */
-/* ========================================================= */
-.dashboard-table {
-  width: 100%;
-  margin: 30px auto 0 auto;
-  background: #fffdea;
-  padding: 20px;
-  border-radius: 15px;
-  border: 3px solid #f4e57d;
-  box-shadow: 0 0 10px rgba(0,0,0,0.12);
-  box-sizing: border-box;
-  overflow-x: auto;
-}
-
-.dashboard-table-container {
-  width: 100%;
-  overflow-x: auto;
-  border-radius: 12px;
-}
-
-.dashboard-table table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 800px;
-}
-
-.dashboard-table th {
-  background: #ffd965;
-  padding: 15px 12px;
-  color: #333;
-  font-weight: bold;
-  text-align: center;
-  border-bottom: 3px solid #f4e57d;
-  white-space: nowrap;
-}
-
-.dashboard-table td {
-  padding: 12px 10px;
-  text-align: center;
-  border-bottom: 1px dashed #e1c35a;
-  white-space: nowrap;
-}
-
-.dashboard-table tr:last-child td {
-  border-bottom: none;
-}
-
-.dashboard-table tr:hover {
-  background: rgba(255, 247, 200, 0.3);
-}
 
 .no-data {
   text-align: center;
