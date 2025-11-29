@@ -875,135 +875,7 @@ const productosFiltrados = productosDetallados.filter(producto => {
           <div className="historial-card management-container">
             <h3 className="historial-title">🏷️ Administrar Categorías y Productos</h3>
 
-            {/* NUEVA CATEGORÍA */}
-            <div className="filtro-container modulo-productos management-form">
-              <div className="filtro-item">
-                <label>Nueva categoría:</label>
-                <input
-                  type="text"
-                  value={nuevaCategoria}
-                  onChange={(e) => setNuevaCategoria(e.target.value)}
-                  placeholder="Nombre de la categoría"
-                />
-              </div>
-              <button onClick={agregarCategoria}>Agregar categoría</button>
-            </div>
-
-            {/* LISTA DE CATEGORÍAS EXISTENTES */}
-            <div className="categories-section">
-              <h4>📂 Categorías Existentes</h4>
-              {categorias.length === 0 ? (
-                <p className="empty-state">No hay categorías creadas</p>
-              ) : (
-                <div className="categories-list">
-                  {categorias.map(categoria => {
-                    const productosEnCategoria = obtenerProductosPorCategoria(categoria.id);
-
-                    if (editandoCategoria?.id === categoria.id) {
-                      return (
-                        <div key={categoria.id} className="category-item editing">
-                          <div className="edit-form">
-                            <input
-                              type="text"
-                              value={editandoCategoria.nombre}
-                              onChange={(e) => setEditandoCategoria(prev => ({
-                                ...prev,
-                                nombre: e.target.value
-                              }))}
-                              placeholder="Nombre de la categoría"
-                            />
-                            <div className="edit-form-actions">
-                              <button
-                                className="btn-save"
-                                onClick={guardarCategoria}
-                              >
-                                💾 Guardar
-                              </button>
-                              <button
-                                className="btn-cancel"
-                                onClick={cancelarEdicionCategoria}
-                              >
-                                ✖️ Cancelar
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div key={categoria.id} className="category-item">
-                        <div className="category-info">
-                          <strong>{categoria.nombre}</strong>
-                          <div className="category-count">
-                            {productosEnCategoria} productos
-                          </div>
-                        </div>
-                        <div>
-                          <button
-                            onClick={() => iniciarEdicionCategoria(categoria)}
-                            className="btn-edit"
-                            title="Editar categoría"
-                          >
-                            ✏️ Editar
-                          </button>
-                          <button
-                            onClick={() => abrirModalEliminar(
-                              'categoria',
-                              categoria.id,
-                              categoria.nombre,
-                              `${productosEnCategoria}`
-                            )}
-                            className="btn-delete-category"
-                            title="Eliminar categoría y todos sus productos"
-                          >
-                            🗑️ Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* NUEVO PRODUCTO */}
-            <div className="filtro-container modulo-productos management-form">
-              <div className="filtro-item">
-                <label>Nombre producto:</label>
-                <input
-                  type="text"
-                  value={nuevoProducto.nombre}
-                  onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
-                  placeholder="Nombre del producto"
-                />
-              </div>
-              <div className="filtro-item">
-                <label>Precio:</label>
-                <input
-                  type="number"
-                  value={nuevoProducto.precio}
-                  onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                />
-              </div>
-              <div className="filtro-item">
-                <label>Categoría:</label>
-                <select
-                  value={nuevoProducto.categoria_id}
-                  onChange={(e) => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })}
-                >
-                  <option value="">Selecciona categoría</option>
-                  {categorias.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                  ))}
-                </select>
-              </div>
-              <button onClick={agregarProducto}>Agregar producto</button>
-            </div>
-
+            
             {/* FILTROS DE PRODUCTOS */}
             <div className="filters-section">
               <h4 style={{ marginBottom: '15px', color: 'var(--color-primary)' }}>🔍 Filtros de Búsqueda</h4>
@@ -1165,6 +1037,134 @@ const productosFiltrados = productosDetallados.filter(producto => {
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+            {/* NUEVA CATEGORÍA */}
+            <div className="filtro-container modulo-productos management-form">
+              <div className="filtro-item">
+                <label>Nueva categoría:</label>
+                <input
+                  type="text"
+                  value={nuevaCategoria}
+                  onChange={(e) => setNuevaCategoria(e.target.value)}
+                  placeholder="Nombre de la categoría"
+                />
+              </div>
+              <button onClick={agregarCategoria}>Agregar categoría</button>
+            </div>
+
+            {/* NUEVO PRODUCTO */}
+            <div className="filtro-container modulo-productos management-form">
+              <div className="filtro-item">
+                <label>Nombre producto:</label>
+                <input
+                  type="text"
+                  value={nuevoProducto.nombre}
+                  onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
+                  placeholder="Nombre del producto"
+                />
+              </div>
+              <div className="filtro-item">
+                <label>Precio:</label>
+                <input
+                  type="number"
+                  value={nuevoProducto.precio}
+                  onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                />
+              </div>
+              <div className="filtro-item">
+                <label>Categoría:</label>
+                <select
+                  value={nuevoProducto.categoria_id}
+                  onChange={(e) => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })}
+                >
+                  <option value="">Selecciona categoría</option>
+                  {categorias.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <button onClick={agregarProducto}>Agregar producto</button>
+            </div>
+
+            {/* LISTA DE CATEGORÍAS EXISTENTES */}
+            <div className="categories-section">
+              <h4>📂 Categorías Existentes</h4>
+              {categorias.length === 0 ? (
+                <p className="empty-state">No hay categorías creadas</p>
+              ) : (
+                <div className="categories-list">
+                  {categorias.map(categoria => {
+                    const productosEnCategoria = obtenerProductosPorCategoria(categoria.id);
+
+                    if (editandoCategoria?.id === categoria.id) {
+                      return (
+                        <div key={categoria.id} className="category-item editing">
+                          <div className="edit-form">
+                            <input
+                              type="text"
+                              value={editandoCategoria.nombre}
+                              onChange={(e) => setEditandoCategoria(prev => ({
+                                ...prev,
+                                nombre: e.target.value
+                              }))}
+                              placeholder="Nombre de la categoría"
+                            />
+                            <div className="edit-form-actions">
+                              <button
+                                className="btn-save"
+                                onClick={guardarCategoria}
+                              >
+                                💾 Guardar
+                              </button>
+                              <button
+                                className="btn-cancel"
+                                onClick={cancelarEdicionCategoria}
+                              >
+                                ✖️ Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div key={categoria.id} className="category-item">
+                        <div className="category-info">
+                          <strong>{categoria.nombre}</strong>
+                          <div className="category-count">
+                            {productosEnCategoria} productos
+                          </div>
+                        </div>
+                        <div>
+                          <button
+                            onClick={() => iniciarEdicionCategoria(categoria)}
+                            className="btn-edit"
+                            title="Editar categoría"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => abrirModalEliminar(
+                              'categoria',
+                              categoria.id,
+                              categoria.nombre,
+                              `${productosEnCategoria}`
+                            )}
+                            className="btn-delete-category"
+                            title="Eliminar categoría y todos sus productos"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
