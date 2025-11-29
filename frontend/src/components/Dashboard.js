@@ -551,34 +551,6 @@ function Dashboard() {
                 )}
               </div>
             </div>
-
-            <div className="dashboard-table">
-              <h3>🏆 Top 5 productos más vendidos hoy</h3>
-              {topProductos.length === 0 ? (
-                <p className="no-data">No hay ventas registradas hoy.</p>
-              ) : (
-                <div className="dashboard-table-container">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {topProductos.map((p, i) => (
-                        <tr key={i}>
-                          <td>{p.nombre}</td>
-                          <td>x{p.cantidad}</td>
-                          <td>${parseFloat(p.total).toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
           </>
         )}
 
