@@ -15,7 +15,11 @@ const app = express();
 
 // Configuración de CORS
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://puntoventahappi.netlify.app', 'https://punto-venta-happi.vercel.app'],
+  origin: ['http://localhost:3000', 
+    'https://puntoventahappi.netlify.app',  
+    'https://punto-venta-happi.vercel.app',  // ← AGREGAR ESTA URL
+    'https://punto-venta-happi-git-main-gerardos.vercel.app', // ← Y esta para previews
+    'https://punto-venta-happi.vercel.app'], // ← Por si acaso],
   credentials: true
 }));
 
