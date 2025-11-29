@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import config from "./config";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -15,6 +16,7 @@ import {
 import { Bar, Doughnut } from 'react-chartjs-2';
 import "../dashboard.css";
 
+
 // Registrar componentes de Chart.js
 ChartJS.register(
   CategoryScale,
@@ -29,6 +31,7 @@ ChartJS.register(
 );
 
 function Dashboard() {
+  const API_BASE_URL = config.API_BASE_URL;
   const [ventasHoy, setVentasHoy] = useState(0);
   const [cantidadVentas, setCantidadVentas] = useState(0);
   const [productosVendidos, setProductosVendidos] = useState(0);
