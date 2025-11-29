@@ -115,10 +115,22 @@ function Dashboard() {
 
   const cargarVentasSemana = async () => {
     try {
+      console.log('🔄 Cargando ventas de la semana...');
       const res = await axios.get(`${API_BASE_URL}/api/dashboard/ventas-semana`);
-      setVentasSemana(res.data);
+
+      console.log('📈 Respuesta ventas semana:', res.data);
+
+      // VALIDAR que la respuesta sea un array
+      if (Array.isArray(res.data)) {
+        setVentasSemana(res.data);
+      } else {
+        console.error('❌ ventasSemana no es array:', res.data);
+        setVentasSemana([]); // Establecer array vacío por defecto
+      }
     } catch (err) {
-      console.error("Error cargando ventas de la semana:", err);
+      console.error("❌ Error cargando ventas de la semana:", err);
+      console.error("❌ Detalles:", err.response);
+
     }
   };
 
@@ -146,15 +158,26 @@ function Dashboard() {
     }
   };
 
+  // 📊 Configuración para la gráfica de barras - CON VALIDACIÓN
   const datosGraficaBarras = {
-    labels: ventasSemana.map(item => {
-      const fecha = new Date(item.fecha);
-      return `${fecha.getDate()}/${fecha.getMonth() + 1}`;
-    }),
+    labels: Array.isArray(ventasSemana)
+      ? ventasSemana.map(item => {
+        try {
+          const fecha = new Date(item.fecha);
+          return `${fecha.getDate()}/${fecha.getMonth() + 1}`;
+        } catch (error) {
+          console.error('Error formateando fecha:', item.fecha);
+          return 'Fecha inválida';
+        }
+      })
+      : [], // Si no es array, usar array vacío
+
     datasets: [
       {
         label: 'Ventas Totales ($)',
-        data: ventasSemana.map(item => item.total_ventas),
+        data: Array.isArray(ventasSemana)
+          ? ventasSemana.map(item => item.total_ventas || 0)
+          : [],
         backgroundColor: 'rgba(217, 107, 32, 0.8)',
         borderColor: 'rgba(217, 107, 32, 1)',
         borderWidth: 2,
@@ -162,7 +185,9 @@ function Dashboard() {
       },
       {
         label: 'Número de Ventas',
-        data: ventasSemana.map(item => item.cantidad_ventas),
+        data: Array.isArray(ventasSemana)
+          ? ventasSemana.map(item => item.cantidad_ventas || 0)
+          : [],
         backgroundColor: 'rgba(248, 241, 150, 0.8)',
         borderColor: 'rgba(244, 229, 125, 1)',
         borderWidth: 2,
@@ -455,13 +480,14 @@ function Dashboard() {
                 }}>
                   📈 Ventas de la Semana
                 </h3>
-                {ventasSemana.length > 0 ? (
-                  <div style={{ height: '200px' }}> {/* Contenedor más pequeño */}
+                {/* ✅ VALIDAR que ventasSemana sea array y tenga datos */}
+                {Array.isArray(ventasSemana) && ventasSemana.length > 0 ? (
+                  <div style={{ height: '200px' }}>
                     <Bar
                       data={datosGraficaBarras}
                       options={{
                         ...opcionesGrafica,
-                        maintainAspectRatio: false, // Permite controlar la altura
+                        maintainAspectRatio: false,
                         plugins: {
                           ...opcionesGrafica.plugins,
                           legend: {
@@ -498,7 +524,10 @@ function Dashboard() {
                     fontSize: '14px',
                     margin: 0
                   }}>
-                    No hay datos de ventas de la semana
+                    {Array.isArray(ventasSemana)
+                      ? 'No hay datos de ventas de la semana'
+                      : 'Error cargando datos de ventas'
+                    }
                   </p>
                 )}
               </div>
