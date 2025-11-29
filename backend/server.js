@@ -428,10 +428,12 @@ app.get("/api/dashboard/historial", (req, res) => {
 });
 
 // ===============================================================
-//                     GENERAR REPORTE PDF
+//                     GENERAR REPORTE PDF - VERSIÓN MEJORADA
 // ===============================================================
 app.get("/api/dashboard/reporte", (req, res) => {
   const { fecha, tipo } = req.query;
+
+  console.log("📋 Solicitud de reporte para fecha:", fecha);
 
   if (!fecha) {
     return res.status(400).json({ error: "Fecha requerida" });
@@ -443,73 +445,116 @@ app.get("/api/dashboard/reporte", (req, res) => {
       v.id as venta_id,
       v.fecha,
       v.total,
-      GROUP_CONCAT(p.nombre || ' (x' || dv.cantidad || ')') as productos,
-      COUNT(dv.id) as total_productos
+      p.nombre as producto_nombre,
+      dv.cantidad,
+      dv.precio as precio_unitario,
+      (dv.cantidad * dv.precio) as subtotal
     FROM ventas v
-    LEFT JOIN detalle_venta dv ON v.id = dv.venta_id
-    LEFT JOIN productos p ON dv.producto_id = p.id
+    JOIN detalle_venta dv ON v.id = dv.venta_id
+    JOIN productos p ON dv.producto_id = p.id
     WHERE DATE(v.fecha) = ?
-    GROUP BY v.id
-    ORDER BY v.fecha DESC
+    ORDER BY v.fecha DESC, v.id
   `;
 
   // Obtener resumen del día
   const queryResumen = `
     SELECT 
-      COUNT(*) as total_ventas,
-      SUM(v.total) as total_ingresos,
-      SUM(dv.cantidad) as total_productos_vendidos,
-      (SELECT nombre FROM productos p 
-       JOIN detalle_venta dv ON p.id = dv.producto_id 
-       JOIN ventas v2 ON dv.venta_id = v2.id 
-       WHERE DATE(v2.fecha) = ? 
-       GROUP BY p.id 
-       ORDER BY SUM(dv.cantidad) DESC 
-       LIMIT 1) as producto_mas_vendido
+      COUNT(DISTINCT v.id) as total_ventas,
+      COALESCE(SUM(v.total), 0) as total_ingresos,
+      COALESCE(SUM(dv.cantidad), 0) as total_productos_vendidos
     FROM ventas v
     LEFT JOIN detalle_venta dv ON v.id = dv.venta_id
     WHERE DATE(v.fecha) = ?
   `;
 
+  // Obtener producto más vendido
+  const queryProductoMasVendido = `
+    SELECT 
+      p.nombre,
+      SUM(dv.cantidad) as total_vendido
+    FROM productos p
+    JOIN detalle_venta dv ON p.id = dv.producto_id
+    JOIN ventas v ON dv.venta_id = v.id
+    WHERE DATE(v.fecha) = ?
+    GROUP BY p.id
+    ORDER BY total_vendido DESC
+    LIMIT 1
+  `;
+
   db.serialize(() => {
     // Obtener ventas del día
-    db.all(queryVentas, [fecha], (err, ventas) => {
+    db.all(queryVentas, [fecha], (err, ventasDetalle) => {
       if (err) {
         console.error("Error obteniendo ventas para reporte:", err);
-        return res.status(500).json({ error: "Error generando reporte" });
+        return res.status(500).json({ error: "Error obteniendo detalle de ventas" });
       }
 
+      console.log(`📊 Ventas encontradas: ${ventasDetalle.length}`);
+
+      // Agrupar ventas por ID de venta
+      const ventasAgrupadas = {};
+      ventasDetalle.forEach(detalle => {
+        if (!ventasAgrupadas[detalle.venta_id]) {
+          ventasAgrupadas[detalle.venta_id] = {
+            venta_id: detalle.venta_id,
+            fecha: detalle.fecha,
+            total: detalle.total,
+            productos: []
+          };
+        }
+        ventasAgrupadas[detalle.venta_id].productos.push({
+          nombre: detalle.producto_nombre,
+          cantidad: detalle.cantidad,
+          precio_unitario: detalle.precio_unitario,
+          subtotal: detalle.subtotal
+        });
+      });
+
+      const ventas = Object.values(ventasAgrupadas);
+
       // Obtener resumen del día
-      db.get(queryResumen, [fecha, fecha], (err, resumen) => {
+      db.get(queryResumen, [fecha], (err, resumen) => {
         if (err) {
           console.error("Error obteniendo resumen para reporte:", err);
-          return res.status(500).json({ error: "Error generando reporte" });
+          return res.status(500).json({ error: "Error obteniendo resumen" });
         }
 
-        if (tipo === "pdf") {
-          generarPDF(res, fecha, ventas, resumen);
-        } else {
-          // Devolver datos en JSON
-          res.json({
+        // Obtener producto más vendido
+        db.get(queryProductoMasVendido, [fecha], (err, productoTop) => {
+          if (err) {
+            console.error("Error obteniendo producto más vendido:", err);
+            return res.status(500).json({ error: "Error obteniendo producto más vendido" });
+          }
+
+          const datosReporte = {
             fecha,
             ventas,
             resumen: resumen || {
               total_ventas: 0,
               total_ingresos: 0,
-              total_productos_vendidos: 0,
-              producto_mas_vendido: null
-            }
-          });
-        }
+              total_productos_vendidos: 0
+            },
+            producto_mas_vendido: productoTop || { nombre: 'No hay ventas', total_vendido: 0 }
+          };
+
+          console.log("📈 Resumen del reporte:", datosReporte.resumen);
+
+          if (tipo === "pdf") {
+            generarPDF(res, fecha, datosReporte);
+          } else {
+            // Devolver datos en JSON
+            res.json(datosReporte);
+          }
+        });
       });
     });
   });
 });
 
 // ===============================================================
-//                     FUNCIÓN GENERAR PDF
+//                     FUNCIÓN GENERAR PDF - VERSIÓN MEJORADA
 // ===============================================================
-const generarPDF = (res, fecha, ventas, resumen) => {
+const generarPDF = (res, fecha, datos) => {
   try {
     const doc = new PDFDocument();
     
@@ -534,61 +579,77 @@ const generarPDF = (res, fecha, ventas, resumen) => {
        .lineWidth(2)
        .stroke();
 
+    let yPosition = 130;
+
     // Resumen del día
     doc.fontSize(14)
        .fillColor('#d96b20')
-       .text('RESUMEN DEL DÍA', 50, 130)
+       .text('RESUMEN DEL DÍA', 50, yPosition)
        .fontSize(12)
        .fillColor('#333');
 
-    const resumenData = resumen || {
-      total_ventas: 0,
-      total_ingresos: 0,
-      total_productos_vendidos: 0,
-      producto_mas_vendido: 'N/A'
-    };
+    yPosition += 25;
 
-    doc.text(`• Total de ventas: ${resumenData.total_ventas || 0}`, 70, 155);
-    doc.text(`• Ingresos totales: $${parseFloat(resumenData.total_ingresos || 0).toFixed(2)}`, 70, 170);
-    doc.text(`• Productos vendidos: ${resumenData.total_productos_vendidos || 0}`, 70, 185);
-    doc.text(`• Producto más vendido: ${resumenData.producto_mas_vendido || 'N/A'}`, 70, 200);
+    doc.text(`• Total de ventas: ${datos.resumen.total_ventas}`, 70, yPosition);
+    yPosition += 15;
+    
+    doc.text(`• Ingresos totales: $${parseFloat(datos.resumen.total_ingresos).toFixed(2)}`, 70, yPosition);
+    yPosition += 15;
+    
+    doc.text(`• Productos vendidos: ${datos.resumen.total_productos_vendidos}`, 70, yPosition);
+    yPosition += 15;
+    
+    doc.text(`• Producto más vendido: ${datos.producto_mas_vendido.nombre} (${datos.producto_mas_vendido.total_vendido} unidades)`, 70, yPosition);
+    yPosition += 30;
 
     // Detalle de ventas
-    let yPosition = 240;
-
-    if (ventas && ventas.length > 0) {
+    if (datos.ventas && datos.ventas.length > 0) {
       doc.fontSize(14)
          .fillColor('#d96b20')
          .text('DETALLE DE VENTAS', 50, yPosition)
          .fontSize(12)
          .fillColor('#333');
 
-      yPosition += 30;
+      yPosition += 25;
 
-      ventas.forEach((venta, index) => {
+      datos.ventas.forEach((venta, index) => {
         // Verificar si hay espacio en la página
         if (yPosition > 700) {
           doc.addPage();
           yPosition = 50;
         }
 
-        doc.text(`Venta #${venta.venta_id} - ${new Date(venta.fecha).toLocaleTimeString('es-ES')}`, 70, yPosition);
-        doc.text(`Productos: ${venta.productos || 'N/A'}`, 70, yPosition + 15);
-        doc.text(`Total: $${parseFloat(venta.total).toFixed(2)}`, 70, yPosition + 30);
-        
+        const horaVenta = new Date(venta.fecha).toLocaleTimeString('es-ES', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+
+        doc.text(`Venta #${venta.venta_id} - ${horaVenta}`, 70, yPosition);
+        yPosition += 15;
+
+        // Productos de esta venta
+        venta.productos.forEach(producto => {
+          doc.text(`   ${producto.nombre} x${producto.cantidad} - $${parseFloat(producto.subtotal).toFixed(2)}`, 85, yPosition);
+          yPosition += 12;
+        });
+
+        doc.text(`Total: $${parseFloat(venta.total).toFixed(2)}`, 70, yPosition);
+        yPosition += 20;
+
         // Línea separadora entre ventas
-        doc.moveTo(70, yPosition + 45)
-           .lineTo(550, yPosition + 45)
+        doc.moveTo(70, yPosition)
+           .lineTo(550, yPosition)
            .strokeColor('#f4e57d')
            .lineWidth(1)
            .stroke();
 
-        yPosition += 60;
+        yPosition += 15;
       });
     } else {
       doc.fontSize(12)
          .fillColor('#666')
          .text('No hay ventas registradas para esta fecha.', 70, yPosition);
+      yPosition += 30;
     }
 
     // Pie de página
@@ -602,7 +663,7 @@ const generarPDF = (res, fecha, ventas, resumen) => {
 
   } catch (error) {
     console.error("Error generando PDF:", error);
-    res.status(500).json({ error: "Error generando reporte PDF" });
+    res.status(500).json({ error: "Error generando reporte PDF: " + error.message });
   }
 };
 

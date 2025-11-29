@@ -125,61 +125,76 @@ function Dashboard() {
   };
 
   // 📌 Función para generar reporte PDF
-  const generarReporte = async (fecha, tipo) => {
-    if (!fecha) {
-      setToast({ mensaje: "❌ Selecciona una fecha válida", tipo: "error" });
-      return;
-    }
+  // 📌 Función para generar reporte PDF - VERSIÓN CORREGIDA
+const generarReporte = async (fechaMostrada, tipo) => {
+  if (!fechaMostrada) {
+    setToast({ mensaje: "❌ Selecciona una fecha válida", tipo: "error" });
+    return;
+  }
 
-    try {
-      setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
+  try {
+    setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
 
-      if (tipo === "pdf") {
-        // Generar y descargar PDF
-        const response = await fetch(
-          `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fecha}&tipo=pdf`
-        );
-
-        if (!response.ok) {
-          throw new Error('Error generando reporte');
-        }
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-
-        // Crear enlace para descarga
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `reporte-${fecha}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-
-        setToast({ mensaje: "✅ Reporte PDF generado y descargado", tipo: "success" });
-      } else {
-        // Obtener datos en JSON (para vista previa)
-        const response = await axios.get(
-          `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fecha}`
-        );
-
-        console.log("Datos del reporte:", response.data);
-        setToast({ mensaje: "📋 Datos del reporte cargados", tipo: "success" });
-
-        // Aquí puedes mostrar los datos en un modal o nueva sección
-        // Por ahora solo los mostramos en consola
+    // Convertir fecha de formato mostrado (DD/MM/AAAA) a formato ISO (AAAA-MM-DD)
+    const convertirFechaAISO = (fechaString) => {
+      const partes = fechaString.split('/');
+      if (partes.length === 3) {
+        // Formato DD/MM/AAAA -> AAAA-MM-DD
+        return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
       }
-    } catch (err) {
-      console.error("Error generando reporte:", err);
-      setToast({
-        mensaje: "❌ Error generando reporte. Intenta nuevamente.",
-        tipo: "error"
-      });
+      return fechaString; // Si ya está en formato ISO, dejarlo igual
+    };
+
+    const fechaISO = convertirFechaAISO(fechaMostrada);
+
+    if (tipo === "pdf") {
+      // Generar y descargar PDF
+      const response = await fetch(
+        `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaISO}&tipo=pdf`
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error del servidor:', errorText);
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      
+      if (blob.size === 0) {
+        throw new Error('El archivo PDF está vacío');
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      
+      // Crear enlace para descarga
+      const link = document.createElement('a');
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setToast({ mensaje: "✅ Reporte PDF generado y descargado", tipo: "success" });
+    } else {
+      // Obtener datos en JSON (para vista previa)
+      const response = await axios.get(
+        `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaISO}`
+      );
+      
+      console.log("Datos del reporte:", response.data);
+      setToast({ mensaje: "📋 Datos del reporte cargados", tipo: "success" });
     }
-
-    setTimeout(() => setToast(""), 4000);
-  };
-
+  } catch (err) {
+    console.error("Error generando reporte:", err);
+    setToast({ 
+      mensaje: `❌ Error: ${err.message}`, 
+      tipo: "error" 
+    });
+  }
+  
+  setTimeout(() => setToast(""), 4000);
+};
   // 📌 Categorías
   const cargarCategorias = async () => {
     try {
