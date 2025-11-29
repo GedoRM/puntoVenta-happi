@@ -41,7 +41,7 @@ function Dashboard() {
   const [fechaFin, setFechaFin] = useState("");
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [errorHistorial, setErrorHistorial] = useState("");
-
+  
 
   // Módulo de categorías y productos
   const [mostrarModuloProductos, setMostrarModuloProductos] = useState(false);
@@ -52,18 +52,6 @@ function Dashboard() {
   const [toast, setToast] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-
-    // Función para calcular la altura máxima de las barras
-  const calcularMaxVentas = () => {
-    if (ventasSemana.length === 0) return 100;
-    return Math.max(...ventasSemana.map(v => v.total_ventas));
-  };
-
-  // Función para formatear fecha
-  const formatearFecha = (fechaStr) => {
-    const fecha = new Date(fechaStr);
-    return fecha.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
-  };
 
   // Detectar si es móvil
   useEffect(() => {
@@ -122,7 +110,7 @@ function Dashboard() {
     }
   };
 
-  const cargarVentasSemana = async () => {
+    const cargarVentasSemana = async () => {
     try {
       const res = await axios.get("https://puntoventa-happi.onrender.com/api/dashboard/ventas-semana");
       setVentasSemana(res.data);
@@ -131,7 +119,7 @@ function Dashboard() {
     }
   };
 
-  // 📊 Configuración para la gráfica de barras
+    // 📊 Configuración para la gráfica de barras
   const opcionesGrafica = {
     responsive: true,
     plugins: {
@@ -147,7 +135,7 @@ function Dashboard() {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: function (value) {
+          callback: function(value) {
             return '$' + value;
           }
         }
@@ -220,84 +208,84 @@ function Dashboard() {
   };
 
   // 📌 Historial - Versión mejorada
-  const cargarHistorial = () => {
-    if (!fechaInicio || !fechaFin) {
-      setErrorHistorial("Por favor selecciona ambas fechas");
-      return;
+const cargarHistorial = () => {
+  if (!fechaInicio || !fechaFin) {
+    setErrorHistorial("Por favor selecciona ambas fechas");
+    return;
+  }
+
+  setCargandoHistorial(true);
+  setErrorHistorial("");
+
+  axios
+    .get(`https://puntoventa-happi.onrender.com/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
+    .then((res) => {
+      setHistorial(res.data);
+      setCargandoHistorial(false);
+      if (res.data.length === 0) {
+        setErrorHistorial("No hay ventas en el rango de fechas seleccionado");
+      }
+    })
+    .catch((err) => {
+      console.error("Error cargando historial:", err);
+      setErrorHistorial("Error al cargar el historial. Intenta nuevamente.");
+      setCargandoHistorial(false);
+    });
+};
+
+// 📌 Función para generar reporte PDF - VERSIÓN CORREGIDA
+const generarReporte = async (rowData, tipo) => {
+  try {
+    setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
+
+    // Asegurarnos de obtener la fecha correcta
+    let fechaParaReporte;
+    
+    if (typeof rowData === 'object' && rowData.fechaISO) {
+      // Si es un objeto del historial, usar fechaISO
+      fechaParaReporte = rowData.fechaISO;
+    } else if (typeof rowData === 'string') {
+      // Si es un string (fecha directamente)
+      fechaParaReporte = rowData;
+    } else {
+      console.error("❌ Formato de datos no reconocido:", rowData);
+      throw new Error('Formato de fecha no válido');
     }
 
-    setCargandoHistorial(true);
-    setErrorHistorial("");
+    console.log("🔄 Generando reporte para fecha:", fechaParaReporte);
 
-    axios
-      .get(`https://puntoventa-happi.onrender.com/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
-      .then((res) => {
-        setHistorial(res.data);
-        setCargandoHistorial(false);
-        if (res.data.length === 0) {
-          setErrorHistorial("No hay ventas en el rango de fechas seleccionado");
-        }
-      })
-      .catch((err) => {
-        console.error("Error cargando historial:", err);
-        setErrorHistorial("Error al cargar el historial. Intenta nuevamente.");
-        setCargandoHistorial(false);
-      });
-  };
-
-  // 📌 Función para generar reporte PDF - VERSIÓN CORREGIDA
-  const generarReporte = async (rowData, tipo) => {
-    try {
-      setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
-
-      // Asegurarnos de obtener la fecha correcta
-      let fechaParaReporte;
-
-      if (typeof rowData === 'object' && rowData.fechaISO) {
-        // Si es un objeto del historial, usar fechaISO
-        fechaParaReporte = rowData.fechaISO;
-      } else if (typeof rowData === 'string') {
-        // Si es un string (fecha directamente)
-        fechaParaReporte = rowData;
-      } else {
-        console.error("❌ Formato de datos no reconocido:", rowData);
-        throw new Error('Formato de fecha no válido');
+    if (tipo === "pdf") {
+      const response = await fetch(
+        `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaParaReporte}&tipo=pdf`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
-      console.log("🔄 Generando reporte para fecha:", fechaParaReporte);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `reporte-${fechaParaReporte}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
-      if (tipo === "pdf") {
-        const response = await fetch(
-          `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaParaReporte}&tipo=pdf`
-        );
-
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `reporte-${fechaParaReporte}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-
-        setToast({ mensaje: "✅ Reporte PDF generado y descargado", tipo: "success" });
-      }
-    } catch (err) {
-      console.error("Error generando reporte:", err);
-      setToast({
-        mensaje: `❌ Error: ${err.message}`,
-        tipo: "error"
-      });
+      setToast({ mensaje: "✅ Reporte PDF generado y descargado", tipo: "success" });
     }
-
-    setTimeout(() => setToast(""), 4000);
-  };
+  } catch (err) {
+    console.error("Error generando reporte:", err);
+    setToast({ 
+      mensaje: `❌ Error: ${err.message}`, 
+      tipo: "error" 
+    });
+  }
+  
+  setTimeout(() => setToast(""), 4000);
+};
   const limpiarFiltro = () => {
     const hoy = new Date().toISOString().split('T')[0];
     const hace7Dias = new Date();
@@ -438,89 +426,59 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Gráficas compactas */}
-            <div className="graficas-container">
+             {/* Gráficas */}
+      <div className="graficas-container" style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+        gap: '20px',
+        marginBottom: '30px'
+      }}>
+        
+        {/* Gráfica de ventas por día */}
+        <div className="grafica-card" style={{
+          background: '#fffdea',
+          padding: '20px',
+          borderRadius: '15px',
+          border: '3px solid #f4e57d',
+          boxShadow: '0 0 10px rgba(0,0,0,0.12)'
+        }}>
+          <h3 style={{ textAlign: 'center', color: '#d96b20', marginBottom: '15px' }}>
+            📈 Ventas de la Semana
+          </h3>
+          {ventasSemana.length > 0 ? (
+            <Bar data={datosGraficaBarras} options={opcionesGrafica} />
+          ) : (
+            <p className="no-data" style={{ textAlign: 'center', padding: '40px' }}>
+              No hay datos de ventas de la semana
+            </p>
+          )}
+        </div>
 
-              {/* Gráfica de barras compacta */}
-              <div className="grafica-card">
-                <h3>📈 Ventas de la Semana</h3>
-                {ventasSemana.length > 0 ? (
-                  <div className="grafica-barras">
-                    <div className="barras-container">
-                      {ventasSemana.map((venta, index) => {
-                        const altura = (venta.total_ventas / calcularMaxVentas()) * 100; // Altura reducida
-                        return (
-                          <div key={index} className="barra-item">
-                            <div className="barra-valor">${venta.total_ventas}</div>
-                            <div
-                              className="barra"
-                              style={{ height: `${altura}px` }}
-                              title={`${venta.cantidad_ventas} ventas - $${venta.total_ventas}`}
-                            ></div>
-                            <div className="barra-label">
-                              {formatearFecha(venta.fecha)}
-                            </div>
-                            <div className="barra-ventas">{venta.cantidad_ventas}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="no-data" style={{ fontSize: '12px', padding: '20px' }}>
-                    No hay datos de ventas de la semana
-                  </p>
-                )}
-              </div>
+        {/* Gráfica de productos más vendidos */}
+        <div className="grafica-card" style={{
+          background: '#fffdea',
+          padding: '20px',
+          borderRadius: '15px',
+          border: '3px solid #f4e57d',
+          boxShadow: '0 0 10px rgba(0,0,0,0.12)'
+        }}>
+          <h3 style={{ textAlign: 'center', color: '#d96b20', marginBottom: '15px' }}>
+            🍦 Productos Más Vendidos
+          </h3>
+          {topProductos.length > 0 ? (
+            <Doughnut data={datosGraficaProductos} options={opcionesGraficaProductos} />
+          ) : (
+            <p className="no-data" style={{ textAlign: 'center', padding: '40px' }}>
+              No hay ventas hoy
+            </p>
+          )}
+        </div>
+      </div>
 
-              {/* Gráfica de productos compacta */}
-              <div className="grafica-card">
-                <h3>🍦 Productos Más Vendidos</h3>
-                {topProductos.length > 0 ? (
-                  <div className="grafica-productos">
-                    {topProductos.map((producto, index) => {
-                      const maxCantidad = Math.max(...topProductos.map(p => p.cantidad));
-                      const porcentaje = (producto.cantidad / maxCantidad) * 100;
-                      const colores = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'];
-
-                      return (
-                        <div key={index} className="producto-item">
-                          <div className="producto-info">
-                            <span className="producto-nombre">
-                              {producto.nombre.length > 15
-                                ? producto.nombre.substring(0, 15) + '...'
-                                : producto.nombre
-                              }
-                            </span>
-                            <span className="producto-cantidad">x{producto.cantidad}</span>
-                          </div>
-                          <div className="producto-barra-container">
-                            <div
-                              className="producto-barra"
-                              style={{
-                                width: `${porcentaje}%`,
-                                backgroundColor: colores[index % colores.length]
-                              }}
-                            ></div>
-                          </div>
-                          <div className="producto-total">${parseFloat(producto.total).toFixed(0)}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="no-data" style={{ fontSize: '12px', padding: '20px' }}>
-                    No hay ventas hoy
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Tabla compacta */}
             <div className="dashboard-table">
-              <h3>🏆 Detalle de Productos</h3>
+              <h3>🏆 Top 5 productos más vendidos hoy</h3>
               {topProductos.length === 0 ? (
-                <p className="no-data" style={{ fontSize: '14px' }}>No hay ventas registradas hoy.</p>
+                <p className="no-data">No hay ventas registradas hoy.</p>
               ) : (
                 <div className="dashboard-table-container">
                   <table>
@@ -535,8 +493,8 @@ function Dashboard() {
                       {topProductos.map((p, i) => (
                         <tr key={i}>
                           <td>{p.nombre}</td>
-                          <td style={{ textAlign: 'center' }}>x{p.cantidad}</td>
-                          <td style={{ textAlign: 'right' }}>${parseFloat(p.total).toFixed(2)}</td>
+                          <td>x{p.cantidad}</td>
+                          <td>${parseFloat(p.total).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
