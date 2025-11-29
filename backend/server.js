@@ -384,7 +384,7 @@ app.get("/api/dashboard/hoy", (req, res) => {
 });
 
 // ===============================================================
-//                     HISTORIAL DE VENTAS - VERSIÓN CORREGIDA
+//                     HISTORIAL DE VENTAS - VERSIÓN DEFINITIVA
 // ===============================================================
 app.get("/api/dashboard/historial", (req, res) => {
   const { inicio, fin } = req.query;
@@ -395,10 +395,9 @@ app.get("/api/dashboard/historial", (req, res) => {
 
   console.log("📅 Historial solicitado:", { inicio, fin });
 
-  // Ajustar la fecha fin para incluir todo el día (hasta 23:59:59)
-  const fechaFinAjustada = new Date(fin);
-  fechaFinAjustada.setDate(fechaFinAjustada.getDate() + 1); // Sumar un día
-  const fechaFinISO = fechaFinAjustada.toISOString().split('T')[0];
+  // Usar BETWEEN con horas específicas para evitar problemas de zona horaria
+  const fechaInicio = `${inicio} 00:00:00`;
+  const fechaFin = `${fin} 23:59:59`;
 
   const query = `
     SELECT 
@@ -407,12 +406,12 @@ app.get("/api/dashboard/historial", (req, res) => {
       SUM(v.total) as totalVentas,
       SUM(v.total) as ganancias
     FROM ventas v
-    WHERE DATE(v.fecha) >= ? AND DATE(v.fecha) < ?
+    WHERE v.fecha >= ? AND v.fecha <= ?
     GROUP BY DATE(v.fecha)
     ORDER BY fecha DESC
   `;
 
-  db.all(query, [inicio, fechaFinISO], (err, rows) => {
+  db.all(query, [fechaInicio, fechaFin], (err, rows) => {
     if (err) {
       console.error("Error obteniendo historial:", err);
       return res.status(500).json({ error: "Error obteniendo historial" });
@@ -422,7 +421,7 @@ app.get("/api/dashboard/historial", (req, res) => {
 
     // Formatear las fechas y números
     const historialFormateado = rows.map(row => ({
-      fecha: new Date(row.fecha).toLocaleDateString('es-ES', {
+      fecha: new Date(row.fecha + 'T00:00:00').toLocaleDateString('es-ES', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
@@ -438,7 +437,7 @@ app.get("/api/dashboard/historial", (req, res) => {
 });
 
 // ===============================================================
-//                     GENERAR REPORTE PDF - VERSIÓN CORREGIDA
+//                     GENERAR REPORTE PDF - VERSIÓN DEFINITIVA
 // ===============================================================
 app.get("/api/dashboard/reporte", (req, res) => {
   const { fecha, tipo } = req.query;
@@ -449,124 +448,154 @@ app.get("/api/dashboard/reporte", (req, res) => {
     return res.status(400).json({ error: "Fecha requerida" });
   }
 
-  // Usar BETWEEN para incluir todo el día específico
-  const fechaInicio = fecha;
-  const fechaFin = new Date(fecha);
-  fechaFin.setDate(fechaFin.getDate() + 1);
-  const fechaFinISO = fechaFin.toISOString().split('T')[0];
-
-  console.log("📅 Rango de fechas para reporte:", { fechaInicio, fechaFinISO });
-
-  // Obtener datos de ventas para la fecha específica
-  const queryVentas = `
-    SELECT 
-      v.id as venta_id,
-      v.fecha,
-      v.total,
-      p.nombre as producto_nombre,
-      dv.cantidad,
-      dv.precio as precio_unitario,
-      (dv.cantidad * dv.precio) as subtotal
-    FROM ventas v
-    JOIN detalle_venta dv ON v.id = dv.venta_id
-    JOIN productos p ON dv.producto_id = p.id
-    WHERE v.fecha >= ? AND v.fecha < ?
-    ORDER BY v.fecha DESC, v.id
-  `;
-
-  // Obtener resumen del día
-  const queryResumen = `
-    SELECT 
-      COUNT(DISTINCT v.id) as total_ventas,
-      COALESCE(SUM(v.total), 0) as total_ingresos,
-      COALESCE(SUM(dv.cantidad), 0) as total_productos_vendidos
-    FROM ventas v
-    LEFT JOIN detalle_venta dv ON v.id = dv.venta_id
-    WHERE v.fecha >= ? AND v.fecha < ?
-  `;
-
-  // Obtener producto más vendido
-  const queryProductoMasVendido = `
-    SELECT 
-      p.nombre,
-      SUM(dv.cantidad) as total_vendido
-    FROM productos p
-    JOIN detalle_venta dv ON p.id = dv.producto_id
-    JOIN ventas v ON dv.venta_id = v.id
-    WHERE v.fecha >= ? AND v.fecha < ?
-    GROUP BY p.id
-    ORDER BY total_vendido DESC
-    LIMIT 1
-  `;
-
-  db.serialize(() => {
-    // Obtener ventas del día
-    db.all(queryVentas, [`${fechaInicio} 00:00:00`, `${fechaFinISO} 00:00:00`], (err, ventasDetalle) => {
-      if (err) {
-        console.error("Error obteniendo ventas para reporte:", err);
-        return res.status(500).json({ error: "Error obteniendo detalle de ventas: " + err.message });
+  // Función para convertir fecha DD/MM/AAAA a AAAA-MM-DD
+  const convertirFecha = (fechaString) => {
+    console.log("🔄 Convirtiendo fecha:", fechaString);
+    
+    // Si ya está en formato AAAA-MM-DD, retornar directamente
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fechaString)) {
+      return fechaString;
+    }
+    
+    // Convertir de DD/MM/AAAA a AAAA-MM-DD
+    if (fechaString.includes('/')) {
+      const partes = fechaString.split('/');
+      if (partes.length === 3) {
+        const dia = partes[0].padStart(2, '0');
+        const mes = partes[1].padStart(2, '0');
+        const anio = partes[2];
+        return `${anio}-${mes}-${dia}`;
       }
+    }
+    
+    throw new Error(`Formato de fecha no reconocido: ${fechaString}`);
+  };
 
-      console.log(`📊 Ventas encontradas para reporte: ${ventasDetalle.length}`);
+  try {
+    const fechaISO = convertirFecha(fecha);
+    console.log("✅ Fecha convertida a ISO:", fechaISO);
 
-      // Agrupar ventas por ID de venta
-      const ventasAgrupadas = {};
-      ventasDetalle.forEach(detalle => {
-        if (!ventasAgrupadas[detalle.venta_id]) {
-          ventasAgrupadas[detalle.venta_id] = {
-            venta_id: detalle.venta_id,
-            fecha: detalle.fecha,
-            total: detalle.total,
-            productos: []
-          };
-        }
-        ventasAgrupadas[detalle.venta_id].productos.push({
-          nombre: detalle.producto_nombre,
-          cantidad: detalle.cantidad,
-          precio_unitario: detalle.precio_unitario,
-          subtotal: detalle.subtotal
-        });
-      });
+    // Definir rango para el día completo
+    const fechaInicio = `${fechaISO} 00:00:00`;
+    const fechaFin = `${fechaISO} 23:59:59`;
 
-      const ventas = Object.values(ventasAgrupadas);
+    console.log("📅 Rango de fechas para consulta:", { fechaInicio, fechaFin });
 
-      // Obtener resumen del día
-      db.get(queryResumen, [`${fechaInicio} 00:00:00`, `${fechaFinISO} 00:00:00`], (err, resumen) => {
+    // Obtener datos de ventas para la fecha específica
+    const queryVentas = `
+      SELECT 
+        v.id as venta_id,
+        v.fecha,
+        v.total,
+        p.nombre as producto_nombre,
+        dv.cantidad,
+        dv.precio as precio_unitario,
+        (dv.cantidad * dv.precio) as subtotal
+      FROM ventas v
+      JOIN detalle_venta dv ON v.id = dv.venta_id
+      JOIN productos p ON dv.producto_id = p.id
+      WHERE v.fecha >= ? AND v.fecha <= ?
+      ORDER BY v.fecha DESC, v.id
+    `;
+
+    // Obtener resumen del día
+    const queryResumen = `
+      SELECT 
+        COUNT(DISTINCT v.id) as total_ventas,
+        COALESCE(SUM(v.total), 0) as total_ingresos,
+        COALESCE(SUM(dv.cantidad), 0) as total_productos_vendidos
+      FROM ventas v
+      LEFT JOIN detalle_venta dv ON v.id = dv.venta_id
+      WHERE v.fecha >= ? AND v.fecha <= ?
+    `;
+
+    // Obtener producto más vendido
+    const queryProductoMasVendido = `
+      SELECT 
+        p.nombre,
+        SUM(dv.cantidad) as total_vendido
+      FROM productos p
+      JOIN detalle_venta dv ON p.id = dv.producto_id
+      JOIN ventas v ON dv.venta_id = v.id
+      WHERE v.fecha >= ? AND v.fecha <= ?
+      GROUP BY p.id
+      ORDER BY total_vendido DESC
+      LIMIT 1
+    `;
+
+    db.serialize(() => {
+      // Obtener ventas del día
+      db.all(queryVentas, [fechaInicio, fechaFin], (err, ventasDetalle) => {
         if (err) {
-          console.error("Error obteniendo resumen para reporte:", err);
-          return res.status(500).json({ error: "Error obteniendo resumen: " + err.message });
+          console.error("Error obteniendo ventas para reporte:", err);
+          return res.status(500).json({ error: "Error obteniendo detalle de ventas: " + err.message });
         }
 
-        // Obtener producto más vendido
-        db.get(queryProductoMasVendido, [`${fechaInicio} 00:00:00`, `${fechaFinISO} 00:00:00`], (err, productoTop) => {
+        console.log(`📊 Ventas encontradas para reporte: ${ventasDetalle.length}`);
+
+        // Agrupar ventas por ID de venta
+        const ventasAgrupadas = {};
+        ventasDetalle.forEach(detalle => {
+          if (!ventasAgrupadas[detalle.venta_id]) {
+            ventasAgrupadas[detalle.venta_id] = {
+              venta_id: detalle.venta_id,
+              fecha: detalle.fecha,
+              total: detalle.total,
+              productos: []
+            };
+          }
+          ventasAgrupadas[detalle.venta_id].productos.push({
+            nombre: detalle.producto_nombre,
+            cantidad: detalle.cantidad,
+            precio_unitario: detalle.precio_unitario,
+            subtotal: detalle.subtotal
+          });
+        });
+
+        const ventas = Object.values(ventasAgrupadas);
+
+        // Obtener resumen del día
+        db.get(queryResumen, [fechaInicio, fechaFin], (err, resumen) => {
           if (err) {
-            console.error("Error obteniendo producto más vendido:", err);
-            return res.status(500).json({ error: "Error obteniendo producto más vendido: " + err.message });
+            console.error("Error obteniendo resumen para reporte:", err);
+            return res.status(500).json({ error: "Error obteniendo resumen: " + err.message });
           }
 
-          const datosReporte = {
-            fecha: fechaInicio,
-            ventas,
-            resumen: resumen || {
-              total_ventas: 0,
-              total_ingresos: 0,
-              total_productos_vendidos: 0
-            },
-            producto_mas_vendido: productoTop || { nombre: 'No hay ventas', total_vendido: 0 }
-          };
+          // Obtener producto más vendido
+          db.get(queryProductoMasVendido, [fechaInicio, fechaFin], (err, productoTop) => {
+            if (err) {
+              console.error("Error obteniendo producto más vendido:", err);
+              return res.status(500).json({ error: "Error obteniendo producto más vendido: " + err.message });
+            }
 
-          console.log("📈 Resumen del reporte:", datosReporte.resumen);
+            const datosReporte = {
+              fecha: fechaISO,
+              ventas,
+              resumen: resumen || {
+                total_ventas: 0,
+                total_ingresos: 0,
+                total_productos_vendidos: 0
+              },
+              producto_mas_vendido: productoTop || { nombre: 'No hay ventas', total_vendido: 0 }
+            };
 
-          if (tipo === "pdf") {
-            generarPDF(res, fechaInicio, datosReporte);
-          } else {
-            // Devolver datos en JSON
-            res.json(datosReporte);
-          }
+            console.log("📈 Resumen del reporte:", datosReporte.resumen);
+
+            if (tipo === "pdf") {
+              generarPDF(res, fechaISO, datosReporte);
+            } else {
+              // Devolver datos en JSON
+              res.json(datosReporte);
+            }
+          });
         });
       });
     });
-  });
+
+  } catch (error) {
+    console.error("❌ Error procesando fecha:", error);
+    return res.status(400).json({ error: "Formato de fecha inválido: " + error.message });
+  }
 });
 // ===============================================================
 //                     FUNCIÓN GENERAR PDF - VERSIÓN MEJORADA

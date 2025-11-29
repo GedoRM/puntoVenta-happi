@@ -107,13 +107,13 @@ const cargarHistorial = () => {
     });
 };
 
-// Y en la función generarReporte, usa la fecha ISO directamente:
-const generarReporte = async (fechaItem, tipo) => {
+// 📌 Función para generar reporte PDF - VERSIÓN SIMPLIFICADA
+const generarReporte = async (rowData, tipo) => {
   try {
     setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
 
-    // Si el item del historial tiene fechaISO, usarla directamente
-    const fechaParaReporte = fechaItem.fechaISO || fechaItem;
+    // Usar la fecha ISO directamente del row del historial
+    const fechaParaReporte = rowData.fechaISO || rowData.fecha;
     
     console.log("🔄 Generando reporte para fecha:", fechaParaReporte);
 
@@ -123,10 +123,16 @@ const generarReporte = async (fechaItem, tipo) => {
       );
       
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Error del servidor: ${response.status}`);
       }
 
       const blob = await response.blob();
+      
+      if (blob.size === 0) {
+        throw new Error('El archivo PDF está vacío');
+      }
+
       const url = window.URL.createObjectURL(blob);
       
       const link = document.createElement('a');
@@ -142,7 +148,7 @@ const generarReporte = async (fechaItem, tipo) => {
   } catch (err) {
     console.error("Error generando reporte:", err);
     setToast({ 
-      mensaje: `❌ Error: ${err.message}`, 
+      mensaje: `❌ Error al generar reporte: ${err.message}`, 
       tipo: "error" 
     });
   }
