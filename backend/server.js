@@ -384,7 +384,7 @@ app.get("/api/dashboard/hoy", (req, res) => {
 });
 
 // ===============================================================
-//                     HISTORIAL DE VENTAS
+//                     HISTORIAL DE VENTAS - VERSIÓN CORREGIDA
 // ===============================================================
 app.get("/api/dashboard/historial", (req, res) => {
   const { inicio, fin } = req.query;
@@ -393,6 +393,13 @@ app.get("/api/dashboard/historial", (req, res) => {
     return res.status(400).json({ error: "Fechas de inicio y fin requeridas" });
   }
 
+  console.log("📅 Historial solicitado:", { inicio, fin });
+
+  // Ajustar la fecha fin para incluir todo el día (hasta 23:59:59)
+  const fechaFinAjustada = new Date(fin);
+  fechaFinAjustada.setDate(fechaFinAjustada.getDate() + 1); // Sumar un día
+  const fechaFinISO = fechaFinAjustada.toISOString().split('T')[0];
+
   const query = `
     SELECT 
       DATE(v.fecha) as fecha,
@@ -400,16 +407,18 @@ app.get("/api/dashboard/historial", (req, res) => {
       SUM(v.total) as totalVentas,
       SUM(v.total) as ganancias
     FROM ventas v
-    WHERE DATE(v.fecha) BETWEEN ? AND ?
+    WHERE DATE(v.fecha) >= ? AND DATE(v.fecha) < ?
     GROUP BY DATE(v.fecha)
     ORDER BY fecha DESC
   `;
 
-  db.all(query, [inicio, fin], (err, rows) => {
+  db.all(query, [inicio, fechaFinISO], (err, rows) => {
     if (err) {
       console.error("Error obteniendo historial:", err);
       return res.status(500).json({ error: "Error obteniendo historial" });
     }
+
+    console.log(`📊 Filas encontradas en historial: ${rows.length}`);
 
     // Formatear las fechas y números
     const historialFormateado = rows.map(row => ({
@@ -418,6 +427,7 @@ app.get("/api/dashboard/historial", (req, res) => {
         month: '2-digit',
         year: 'numeric'
       }),
+      fechaISO: row.fecha, // Guardar también la fecha ISO para el reporte
       totalVentas: parseFloat(row.totalVentas || 0).toFixed(2),
       totalTickets: row.totalTickets || 0,
       ganancias: parseFloat(row.ganancias || 0).toFixed(2)
@@ -428,7 +438,7 @@ app.get("/api/dashboard/historial", (req, res) => {
 });
 
 // ===============================================================
-//                     GENERAR REPORTE PDF - VERSIÓN MEJORADA
+//                     GENERAR REPORTE PDF - VERSIÓN CORREGIDA
 // ===============================================================
 app.get("/api/dashboard/reporte", (req, res) => {
   const { fecha, tipo } = req.query;
@@ -438,6 +448,14 @@ app.get("/api/dashboard/reporte", (req, res) => {
   if (!fecha) {
     return res.status(400).json({ error: "Fecha requerida" });
   }
+
+  // Usar BETWEEN para incluir todo el día específico
+  const fechaInicio = fecha;
+  const fechaFin = new Date(fecha);
+  fechaFin.setDate(fechaFin.getDate() + 1);
+  const fechaFinISO = fechaFin.toISOString().split('T')[0];
+
+  console.log("📅 Rango de fechas para reporte:", { fechaInicio, fechaFinISO });
 
   // Obtener datos de ventas para la fecha específica
   const queryVentas = `
@@ -452,7 +470,7 @@ app.get("/api/dashboard/reporte", (req, res) => {
     FROM ventas v
     JOIN detalle_venta dv ON v.id = dv.venta_id
     JOIN productos p ON dv.producto_id = p.id
-    WHERE DATE(v.fecha) = ?
+    WHERE v.fecha >= ? AND v.fecha < ?
     ORDER BY v.fecha DESC, v.id
   `;
 
@@ -464,7 +482,7 @@ app.get("/api/dashboard/reporte", (req, res) => {
       COALESCE(SUM(dv.cantidad), 0) as total_productos_vendidos
     FROM ventas v
     LEFT JOIN detalle_venta dv ON v.id = dv.venta_id
-    WHERE DATE(v.fecha) = ?
+    WHERE v.fecha >= ? AND v.fecha < ?
   `;
 
   // Obtener producto más vendido
@@ -475,7 +493,7 @@ app.get("/api/dashboard/reporte", (req, res) => {
     FROM productos p
     JOIN detalle_venta dv ON p.id = dv.producto_id
     JOIN ventas v ON dv.venta_id = v.id
-    WHERE DATE(v.fecha) = ?
+    WHERE v.fecha >= ? AND v.fecha < ?
     GROUP BY p.id
     ORDER BY total_vendido DESC
     LIMIT 1
@@ -483,13 +501,13 @@ app.get("/api/dashboard/reporte", (req, res) => {
 
   db.serialize(() => {
     // Obtener ventas del día
-    db.all(queryVentas, [fecha], (err, ventasDetalle) => {
+    db.all(queryVentas, [`${fechaInicio} 00:00:00`, `${fechaFinISO} 00:00:00`], (err, ventasDetalle) => {
       if (err) {
         console.error("Error obteniendo ventas para reporte:", err);
-        return res.status(500).json({ error: "Error obteniendo detalle de ventas" });
+        return res.status(500).json({ error: "Error obteniendo detalle de ventas: " + err.message });
       }
 
-      console.log(`📊 Ventas encontradas: ${ventasDetalle.length}`);
+      console.log(`📊 Ventas encontradas para reporte: ${ventasDetalle.length}`);
 
       // Agrupar ventas por ID de venta
       const ventasAgrupadas = {};
@@ -513,21 +531,21 @@ app.get("/api/dashboard/reporte", (req, res) => {
       const ventas = Object.values(ventasAgrupadas);
 
       // Obtener resumen del día
-      db.get(queryResumen, [fecha], (err, resumen) => {
+      db.get(queryResumen, [`${fechaInicio} 00:00:00`, `${fechaFinISO} 00:00:00`], (err, resumen) => {
         if (err) {
           console.error("Error obteniendo resumen para reporte:", err);
-          return res.status(500).json({ error: "Error obteniendo resumen" });
+          return res.status(500).json({ error: "Error obteniendo resumen: " + err.message });
         }
 
         // Obtener producto más vendido
-        db.get(queryProductoMasVendido, [fecha], (err, productoTop) => {
+        db.get(queryProductoMasVendido, [`${fechaInicio} 00:00:00`, `${fechaFinISO} 00:00:00`], (err, productoTop) => {
           if (err) {
             console.error("Error obteniendo producto más vendido:", err);
-            return res.status(500).json({ error: "Error obteniendo producto más vendido" });
+            return res.status(500).json({ error: "Error obteniendo producto más vendido: " + err.message });
           }
 
           const datosReporte = {
-            fecha,
+            fecha: fechaInicio,
             ventas,
             resumen: resumen || {
               total_ventas: 0,
@@ -540,7 +558,7 @@ app.get("/api/dashboard/reporte", (req, res) => {
           console.log("📈 Resumen del reporte:", datosReporte.resumen);
 
           if (tipo === "pdf") {
-            generarPDF(res, fecha, datosReporte);
+            generarPDF(res, fechaInicio, datosReporte);
           } else {
             // Devolver datos en JSON
             res.json(datosReporte);
@@ -550,7 +568,6 @@ app.get("/api/dashboard/reporte", (req, res) => {
     });
   });
 });
-
 // ===============================================================
 //                     FUNCIÓN GENERAR PDF - VERSIÓN MEJORADA
 // ===============================================================

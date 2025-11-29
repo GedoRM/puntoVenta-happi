@@ -82,35 +82,73 @@ function Dashboard() {
   };
 
   // 📌 Historial - Versión mejorada
-  const cargarHistorial = () => {
-    if (!fechaInicio || !fechaFin) {
-      setErrorHistorial("Por favor selecciona ambas fechas");
-      return;
+const cargarHistorial = () => {
+  if (!fechaInicio || !fechaFin) {
+    setErrorHistorial("Por favor selecciona ambas fechas");
+    return;
+  }
+
+  setCargandoHistorial(true);
+  setErrorHistorial("");
+
+  axios
+    .get(`https://puntoventa-happi.onrender.com/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
+    .then((res) => {
+      setHistorial(res.data);
+      setCargandoHistorial(false);
+      if (res.data.length === 0) {
+        setErrorHistorial("No hay ventas en el rango de fechas seleccionado");
+      }
+    })
+    .catch((err) => {
+      console.error("Error cargando historial:", err);
+      setErrorHistorial("Error al cargar el historial. Intenta nuevamente.");
+      setCargandoHistorial(false);
+    });
+};
+
+// Y en la función generarReporte, usa la fecha ISO directamente:
+const generarReporte = async (fechaItem, tipo) => {
+  try {
+    setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
+
+    // Si el item del historial tiene fechaISO, usarla directamente
+    const fechaParaReporte = fechaItem.fechaISO || fechaItem;
+    
+    console.log("🔄 Generando reporte para fecha:", fechaParaReporte);
+
+    if (tipo === "pdf") {
+      const response = await fetch(
+        `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaParaReporte}&tipo=pdf`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `reporte-${fechaParaReporte}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setToast({ mensaje: "✅ Reporte PDF generado y descargado", tipo: "success" });
     }
-
-    if (new Date(fechaInicio) > new Date(fechaFin)) {
-      setErrorHistorial("La fecha de inicio no puede ser mayor a la fecha final");
-      return;
-    }
-
-    setCargandoHistorial(true);
-    setErrorHistorial("");
-
-    axios
-      .get(`https://puntoventa-happi.onrender.com/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
-      .then((res) => {
-        setHistorial(res.data);
-        setCargandoHistorial(false);
-        if (res.data.length === 0) {
-          setErrorHistorial("No hay ventas en el rango de fechas seleccionado");
-        }
-      })
-      .catch((err) => {
-        console.error("Error cargando historial:", err);
-        setErrorHistorial("Error al cargar el historial. Intenta nuevamente.");
-        setCargandoHistorial(false);
-      });
-  };
+  } catch (err) {
+    console.error("Error generando reporte:", err);
+    setToast({ 
+      mensaje: `❌ Error: ${err.message}`, 
+      tipo: "error" 
+    });
+  }
+  
+  setTimeout(() => setToast(""), 4000);
+};
 
   const limpiarFiltro = () => {
     const hoy = new Date().toISOString().split('T')[0];
@@ -124,77 +162,7 @@ function Dashboard() {
     setErrorHistorial("");
   };
 
-  // 📌 Función para generar reporte PDF
-  // 📌 Función para generar reporte PDF - VERSIÓN CORREGIDA
-const generarReporte = async (fechaMostrada, tipo) => {
-  if (!fechaMostrada) {
-    setToast({ mensaje: "❌ Selecciona una fecha válida", tipo: "error" });
-    return;
-  }
 
-  try {
-    setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
-
-    // Convertir fecha de formato mostrado (DD/MM/AAAA) a formato ISO (AAAA-MM-DD)
-    const convertirFechaAISO = (fechaString) => {
-      const partes = fechaString.split('/');
-      if (partes.length === 3) {
-        // Formato DD/MM/AAAA -> AAAA-MM-DD
-        return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
-      }
-      return fechaString; // Si ya está en formato ISO, dejarlo igual
-    };
-
-    const fechaISO = convertirFechaAISO(fechaMostrada);
-
-    if (tipo === "pdf") {
-      // Generar y descargar PDF
-      const response = await fetch(
-        `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaISO}&tipo=pdf`
-      );
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error del servidor:', errorText);
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const blob = await response.blob();
-      
-      if (blob.size === 0) {
-        throw new Error('El archivo PDF está vacío');
-      }
-
-      const url = window.URL.createObjectURL(blob);
-      
-      // Crear enlace para descarga
-      const link = document.createElement('a');
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      setToast({ mensaje: "✅ Reporte PDF generado y descargado", tipo: "success" });
-    } else {
-      // Obtener datos en JSON (para vista previa)
-      const response = await axios.get(
-        `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaISO}`
-      );
-      
-      console.log("Datos del reporte:", response.data);
-      setToast({ mensaje: "📋 Datos del reporte cargados", tipo: "success" });
-    }
-  } catch (err) {
-    console.error("Error generando reporte:", err);
-    setToast({ 
-      mensaje: `❌ Error: ${err.message}`, 
-      tipo: "error" 
-    });
-  }
-  
-  setTimeout(() => setToast(""), 4000);
-};
   // 📌 Categorías
   const cargarCategorias = async () => {
     try {
