@@ -426,59 +426,89 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Gráficas */}
-            <div className="graficas-container" style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-              gap: '20px',
-              marginBottom: '30px'
-            }}>
+            {/* Gráficas compactas */}
+            <div className="graficas-container">
 
-              {/* Gráfica de ventas por día */}
-              <div className="grafica-card" style={{
-                background: '#fffdea',
-                padding: '20px',
-                borderRadius: '15px',
-                border: '3px solid #f4e57d',
-                boxShadow: '0 0 10px rgba(0,0,0,0.12)'
-              }}>
-                <h3 style={{ textAlign: 'center', color: '#d96b20', marginBottom: '15px' }}>
-                  📈 Ventas de la Semana
-                </h3>
+              {/* Gráfica de barras compacta */}
+              <div className="grafica-card">
+                <h3>📈 Ventas de la Semana</h3>
                 {ventasSemana.length > 0 ? (
-                  <Bar data={datosGraficaBarras} options={opcionesGrafica} />
+                  <div className="grafica-barras">
+                    <div className="barras-container">
+                      {ventasSemana.map((venta, index) => {
+                        const altura = (venta.total_ventas / calcularMaxVentas()) * 100; // Altura reducida
+                        return (
+                          <div key={index} className="barra-item">
+                            <div className="barra-valor">${venta.total_ventas}</div>
+                            <div
+                              className="barra"
+                              style={{ height: `${altura}px` }}
+                              title={`${venta.cantidad_ventas} ventas - $${venta.total_ventas}`}
+                            ></div>
+                            <div className="barra-label">
+                              {formatearFecha(venta.fecha)}
+                            </div>
+                            <div className="barra-ventas">{venta.cantidad_ventas}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ) : (
-                  <p className="no-data" style={{ textAlign: 'center', padding: '40px' }}>
+                  <p className="no-data" style={{ fontSize: '12px', padding: '20px' }}>
                     No hay datos de ventas de la semana
                   </p>
                 )}
               </div>
 
-              {/* Gráfica de productos más vendidos */}
-              <div className="grafica-card" style={{
-                background: '#fffdea',
-                padding: '20px',
-                borderRadius: '15px',
-                border: '3px solid #f4e57d',
-                boxShadow: '0 0 10px rgba(0,0,0,0.12)'
-              }}>
-                <h3 style={{ textAlign: 'center', color: '#d96b20', marginBottom: '15px' }}>
-                  🍦 Productos Más Vendidos
-                </h3>
+              {/* Gráfica de productos compacta */}
+              <div className="grafica-card">
+                <h3>🍦 Productos Más Vendidos</h3>
                 {topProductos.length > 0 ? (
-                  <Doughnut data={datosGraficaProductos} options={opcionesGraficaProductos} />
+                  <div className="grafica-productos">
+                    {topProductos.map((producto, index) => {
+                      const maxCantidad = Math.max(...topProductos.map(p => p.cantidad));
+                      const porcentaje = (producto.cantidad / maxCantidad) * 100;
+                      const colores = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'];
+
+                      return (
+                        <div key={index} className="producto-item">
+                          <div className="producto-info">
+                            <span className="producto-nombre">
+                              {producto.nombre.length > 15
+                                ? producto.nombre.substring(0, 15) + '...'
+                                : producto.nombre
+                              }
+                            </span>
+                            <span className="producto-cantidad">x{producto.cantidad}</span>
+                          </div>
+                          <div className="producto-barra-container">
+                            <div
+                              className="producto-barra"
+                              style={{
+                                width: `${porcentaje}%`,
+                                backgroundColor: colores[index % colores.length]
+                              }}
+                            ></div>
+                          </div>
+                          <div className="producto-total">${parseFloat(producto.total).toFixed(0)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <p className="no-data" style={{ textAlign: 'center', padding: '40px' }}>
+                  <p className="no-data" style={{ fontSize: '12px', padding: '20px' }}>
                     No hay ventas hoy
                   </p>
                 )}
               </div>
             </div>
 
+            {/* Tabla compacta */}
             <div className="dashboard-table">
-              <h3>🏆 Top 5 productos más vendidos hoy</h3>
+              <h3>🏆 Detalle de Productos</h3>
               {topProductos.length === 0 ? (
-                <p className="no-data">No hay ventas registradas hoy.</p>
+                <p className="no-data" style={{ fontSize: '14px' }}>No hay ventas registradas hoy.</p>
               ) : (
                 <div className="dashboard-table-container">
                   <table>
@@ -493,8 +523,8 @@ function Dashboard() {
                       {topProductos.map((p, i) => (
                         <tr key={i}>
                           <td>{p.nombre}</td>
-                          <td>x{p.cantidad}</td>
-                          <td>${parseFloat(p.total).toFixed(2)}</td>
+                          <td style={{ textAlign: 'center' }}>x{p.cantidad}</td>
+                          <td style={{ textAlign: 'right' }}>${parseFloat(p.total).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
