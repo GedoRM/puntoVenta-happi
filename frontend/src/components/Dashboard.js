@@ -41,7 +41,7 @@ function Dashboard() {
   const [fechaFin, setFechaFin] = useState("");
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [errorHistorial, setErrorHistorial] = useState("");
-  
+
 
   // Módulo de categorías y productos
   const [mostrarModuloProductos, setMostrarModuloProductos] = useState(false);
@@ -110,7 +110,7 @@ function Dashboard() {
     }
   };
 
-    const cargarVentasSemana = async () => {
+  const cargarVentasSemana = async () => {
     try {
       const res = await axios.get("https://puntoventa-happi.onrender.com/api/dashboard/ventas-semana");
       setVentasSemana(res.data);
@@ -119,7 +119,7 @@ function Dashboard() {
     }
   };
 
-    // 📊 Configuración para la gráfica de barras
+  // 📊 Configuración para la gráfica de barras
   const opcionesGrafica = {
     responsive: true,
     plugins: {
@@ -135,7 +135,7 @@ function Dashboard() {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: function(value) {
+          callback: function (value) {
             return '$' + value;
           }
         }
@@ -208,84 +208,84 @@ function Dashboard() {
   };
 
   // 📌 Historial - Versión mejorada
-const cargarHistorial = () => {
-  if (!fechaInicio || !fechaFin) {
-    setErrorHistorial("Por favor selecciona ambas fechas");
-    return;
-  }
-
-  setCargandoHistorial(true);
-  setErrorHistorial("");
-
-  axios
-    .get(`https://puntoventa-happi.onrender.com/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
-    .then((res) => {
-      setHistorial(res.data);
-      setCargandoHistorial(false);
-      if (res.data.length === 0) {
-        setErrorHistorial("No hay ventas en el rango de fechas seleccionado");
-      }
-    })
-    .catch((err) => {
-      console.error("Error cargando historial:", err);
-      setErrorHistorial("Error al cargar el historial. Intenta nuevamente.");
-      setCargandoHistorial(false);
-    });
-};
-
-// 📌 Función para generar reporte PDF - VERSIÓN CORREGIDA
-const generarReporte = async (rowData, tipo) => {
-  try {
-    setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
-
-    // Asegurarnos de obtener la fecha correcta
-    let fechaParaReporte;
-    
-    if (typeof rowData === 'object' && rowData.fechaISO) {
-      // Si es un objeto del historial, usar fechaISO
-      fechaParaReporte = rowData.fechaISO;
-    } else if (typeof rowData === 'string') {
-      // Si es un string (fecha directamente)
-      fechaParaReporte = rowData;
-    } else {
-      console.error("❌ Formato de datos no reconocido:", rowData);
-      throw new Error('Formato de fecha no válido');
+  const cargarHistorial = () => {
+    if (!fechaInicio || !fechaFin) {
+      setErrorHistorial("Por favor selecciona ambas fechas");
+      return;
     }
 
-    console.log("🔄 Generando reporte para fecha:", fechaParaReporte);
+    setCargandoHistorial(true);
+    setErrorHistorial("");
 
-    if (tipo === "pdf") {
-      const response = await fetch(
-        `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaParaReporte}&tipo=pdf`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+    axios
+      .get(`https://puntoventa-happi.onrender.com/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
+      .then((res) => {
+        setHistorial(res.data);
+        setCargandoHistorial(false);
+        if (res.data.length === 0) {
+          setErrorHistorial("No hay ventas en el rango de fechas seleccionado");
+        }
+      })
+      .catch((err) => {
+        console.error("Error cargando historial:", err);
+        setErrorHistorial("Error al cargar el historial. Intenta nuevamente.");
+        setCargandoHistorial(false);
+      });
+  };
+
+  // 📌 Función para generar reporte PDF - VERSIÓN CORREGIDA
+  const generarReporte = async (rowData, tipo) => {
+    try {
+      setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
+
+      // Asegurarnos de obtener la fecha correcta
+      let fechaParaReporte;
+
+      if (typeof rowData === 'object' && rowData.fechaISO) {
+        // Si es un objeto del historial, usar fechaISO
+        fechaParaReporte = rowData.fechaISO;
+      } else if (typeof rowData === 'string') {
+        // Si es un string (fecha directamente)
+        fechaParaReporte = rowData;
+      } else {
+        console.error("❌ Formato de datos no reconocido:", rowData);
+        throw new Error('Formato de fecha no válido');
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `reporte-${fechaParaReporte}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      console.log("🔄 Generando reporte para fecha:", fechaParaReporte);
 
-      setToast({ mensaje: "✅ Reporte PDF generado y descargado", tipo: "success" });
+      if (tipo === "pdf") {
+        const response = await fetch(
+          `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaParaReporte}&tipo=pdf`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `reporte-${fechaParaReporte}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        setToast({ mensaje: "✅ Reporte PDF generado y descargado", tipo: "success" });
+      }
+    } catch (err) {
+      console.error("Error generando reporte:", err);
+      setToast({
+        mensaje: `❌ Error: ${err.message}`,
+        tipo: "error"
+      });
     }
-  } catch (err) {
-    console.error("Error generando reporte:", err);
-    setToast({ 
-      mensaje: `❌ Error: ${err.message}`, 
-      tipo: "error" 
-    });
-  }
-  
-  setTimeout(() => setToast(""), 4000);
-};
+
+    setTimeout(() => setToast(""), 4000);
+  };
   const limpiarFiltro = () => {
     const hoy = new Date().toISOString().split('T')[0];
     const hace7Dias = new Date();
@@ -426,54 +426,131 @@ const generarReporte = async (rowData, tipo) => {
               </div>
             </div>
 
-             {/* Gráficas */}
-      <div className="graficas-container" style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-        gap: '20px',
-        marginBottom: '30px'
-      }}>
-        
-        {/* Gráfica de ventas por día */}
-        <div className="grafica-card" style={{
-          background: '#fffdea',
-          padding: '20px',
-          borderRadius: '15px',
-          border: '3px solid #f4e57d',
-          boxShadow: '0 0 10px rgba(0,0,0,0.12)'
-        }}>
-          <h3 style={{ textAlign: 'center', color: '#d96b20', marginBottom: '15px' }}>
-            📈 Ventas de la Semana
-          </h3>
-          {ventasSemana.length > 0 ? (
-            <Bar data={datosGraficaBarras} options={opcionesGrafica} />
-          ) : (
-            <p className="no-data" style={{ textAlign: 'center', padding: '40px' }}>
-              No hay datos de ventas de la semana
-            </p>
-          )}
-        </div>
+            {/* Gráficas compactas */}
+            <div className="graficas-container" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+              gap: '15px',
+              marginBottom: '20px'
+            }}>
 
-        {/* Gráfica de productos más vendidos */}
-        <div className="grafica-card" style={{
-          background: '#fffdea',
-          padding: '20px',
-          borderRadius: '15px',
-          border: '3px solid #f4e57d',
-          boxShadow: '0 0 10px rgba(0,0,0,0.12)'
-        }}>
-          <h3 style={{ textAlign: 'center', color: '#d96b20', marginBottom: '15px' }}>
-            🍦 Productos Más Vendidos
-          </h3>
-          {topProductos.length > 0 ? (
-            <Doughnut data={datosGraficaProductos} options={opcionesGraficaProductos} />
-          ) : (
-            <p className="no-data" style={{ textAlign: 'center', padding: '40px' }}>
-              No hay ventas hoy
-            </p>
-          )}
-        </div>
-      </div>
+              {/* Gráfica de ventas por día - Compacta */}
+              <div className="grafica-card" style={{
+                background: '#fffdea',
+                padding: '15px',
+                borderRadius: '12px',
+                border: '2px solid #f4e57d',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                height: '280px' // Altura fija reducida
+              }}>
+                <h3 style={{
+                  textAlign: 'center',
+                  color: '#d96b20',
+                  marginBottom: '12px',
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}>
+                  📈 Ventas de la Semana
+                </h3>
+                {ventasSemana.length > 0 ? (
+                  <div style={{ height: '200px' }}> {/* Contenedor más pequeño */}
+                    <Bar
+                      data={datosGraficaBarras}
+                      options={{
+                        ...opcionesGrafica,
+                        maintainAspectRatio: false, // Permite controlar la altura
+                        plugins: {
+                          ...opcionesGrafica.plugins,
+                          legend: {
+                            position: 'top',
+                            labels: {
+                              boxWidth: 12,
+                              font: { size: 11 }
+                            }
+                          }
+                        },
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            ticks: {
+                              callback: function (value) {
+                                return '$' + value;
+                              },
+                              font: { size: 10 }
+                            }
+                          },
+                          x: {
+                            ticks: {
+                              font: { size: 10 }
+                            }
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <p className="no-data" style={{
+                    textAlign: 'center',
+                    padding: '30px',
+                    fontSize: '14px',
+                    margin: 0
+                  }}>
+                    No hay datos de ventas de la semana
+                  </p>
+                )}
+              </div>
+
+              {/* Gráfica de productos más vendidos - Compacta */}
+              <div className="grafica-card" style={{
+                background: '#fffdea',
+                padding: '15px',
+                borderRadius: '12px',
+                border: '2px solid #f4e57d',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                height: '280px' // Misma altura que la otra gráfica
+              }}>
+                <h3 style={{
+                  textAlign: 'center',
+                  color: '#d96b20',
+                  marginBottom: '12px',
+                  fontSize: '16px',
+                  fontWeight: '600'
+                }}>
+                  🍦 Productos Más Vendidos
+                </h3>
+                {topProductos.length > 0 ? (
+                  <div style={{ height: '200px' }}> {/* Contenedor más pequeño */}
+                    <Doughnut
+                      data={datosGraficaProductos}
+                      options={{
+                        ...opcionesGraficaProductos,
+                        maintainAspectRatio: false, // Permite controlar la altura
+                        plugins: {
+                          ...opcionesGraficaProductos.plugins,
+                          legend: {
+                            position: 'bottom',
+                            labels: {
+                              boxWidth: 10,
+                              font: { size: 10 },
+                              padding: 8
+                            }
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <p className="no-data" style={{
+                    textAlign: 'center',
+                    padding: '30px',
+                    fontSize: '14px',
+                    margin: 0
+                  }}>
+                    No hay ventas hoy
+                  </p>
+                )}
+              </div>
+            </div>
 
             <div className="dashboard-table">
               <h3>🏆 Top 5 productos más vendidos hoy</h3>
