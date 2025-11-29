@@ -882,14 +882,255 @@
 }
 
 /* ========================================================= */
+/* 🏷️ GESTIÓN DE CATEGORÍAS Y PRODUCTOS */
+/* ========================================================= */
+
+/* Contenedor principal */
+.management-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Sección de categorías */
+.categories-section {
+  margin-bottom: 30px;
+}
+
+.categories-section h4 {
+  color: #d96b20;
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.categories-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 10px;
+}
+
+.category-item {
+  background: #fff7c8;
+  padding: 15px;
+  border-radius: 10px;
+  border: 2px solid #f4e57d;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.category-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.category-info strong {
+  color: #333;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.category-count {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Botones de acción para categorías */
+.category-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.btn-edit {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.btn-edit:hover {
+  background: #1976D2;
+  transform: scale(1.05);
+}
+
+.btn-delete-category {
+  background: #ff4444;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.btn-delete-category:hover {
+  background: #cc0000;
+  transform: scale(1.05);
+}
+
+/* Sección de productos */
+.products-section h4 {
+  color: #d96b20;
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.products-table-container {
+  overflow-x: auto;
+}
+
+.products-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.products-table th {
+  background: #ffd965;
+  padding: 12px;
+  text-align: left;
+  font-weight: bold;
+  color: #333;
+  border-bottom: 2px solid #f4e57d;
+}
+
+.products-table th:nth-child(3),
+.products-table td:nth-child(3) {
+  text-align: right;
+}
+
+.products-table th:nth-child(4),
+.products-table td:nth-child(4),
+.products-table th:nth-child(5),
+.products-table td:nth-child(5) {
+  text-align: center;
+}
+
+.products-table td {
+  padding: 12px;
+  border-bottom: 1px dashed #f4e57d;
+}
+
+.products-table tr:last-child td {
+  border-bottom: none;
+}
+
+.products-table tr:hover {
+  background: #fff7c8;
+}
+
+/* Botones de acción para productos */
+.product-actions {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
+
+.btn-delete-product {
+  background: #ff4444;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.btn-delete-product:hover {
+  background: #cc0000;
+  transform: scale(1.05);
+}
+
+/* Estados vacíos */
+.empty-state {
+  text-align: center;
+  color: #666;
+  padding: 40px 20px;
+  font-style: italic;
+}
+
+/* Formularios de gestión */
+.management-form {
+  background: #fffdea;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #f4e57d;
+  margin-bottom: 20px;
+}
+
+.management-form .filtro-container.modulo-productos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.management-form .filtro-item {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 150px;
+}
+
+.management-form label {
+  font-weight: bold;
+  color: #d96b20;
+  margin-bottom: 5px;
+}
+
+.management-form input,
+.management-form select {
+  padding: 10px;
+  border: 2px solid #f4e57d;
+  border-radius: 8px;
+  background: #fffdea;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.management-form input:focus,
+.management-form select:focus {
+  outline: none;
+  border-color: #d96b20;
+  background: white;
+}
+
+.management-form button {
+  background: #d96b20;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  height: fit-content;
+}
+
+.management-form button:hover {
+  background: #b8581a;
+  transform: translateY(-2px);
+}
+
+/* ========================================================= */
 /* ✏️ FORMULARIOS DE EDICIÓN */
 /* ========================================================= */
 
 .edit-form {
-  background: var(--color-background);
+  background: #fffdea;
   padding: 15px;
-  border-radius: var(--border-radius);
-  border: 2px solid var(--color-secondary);
+  border-radius: 12px;
+  border: 2px solid #f4e57d;
   margin: 10px 0;
 }
 
@@ -897,7 +1138,7 @@
 .edit-form select {
   width: 100%;
   padding: 8px;
-  border: 2px solid var(--color-secondary);
+  border: 2px solid #f4e57d;
   border-radius: 6px;
   background: white;
   font-size: 14px;
@@ -910,33 +1151,15 @@
   justify-content: flex-end;
 }
 
-/* Botones de acción */
-.btn-edit {
-  background: #2196F3;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: var(--transition);
-  margin-right: 5px;
-}
-
-.btn-edit:hover {
-  background: #1976D2;
-  transform: scale(1.05);
-}
-
 .btn-save {
-  background: var(--color-success);
+  background: #4caf50;
   color: white;
   border: none;
   padding: 6px 12px;
   border-radius: 5px;
   cursor: pointer;
   font-size: 12px;
-  transition: var(--transition);
+  transition: all 0.3s ease;
 }
 
 .btn-save:hover {
@@ -952,7 +1175,7 @@
   border-radius: 5px;
   cursor: pointer;
   font-size: 12px;
-  transition: var(--transition);
+  transition: all 0.3s ease;
 }
 
 .btn-cancel:hover {
@@ -965,11 +1188,17 @@
 /* ========================================================= */
 
 .filters-section {
-  background: var(--color-light);
+  background: #fff7c8;
   padding: 15px;
-  border-radius: var(--border-radius);
-  border: 2px solid var(--color-secondary);
+  border-radius: 12px;
+  border: 2px solid #f4e57d;
   margin-bottom: 20px;
+}
+
+.filters-section h4 {
+  color: #d96b20;
+  margin-bottom: 15px;
+  font-size: 16px;
 }
 
 .filters-row {
@@ -988,7 +1217,7 @@
 
 .filter-group label {
   font-weight: bold;
-  color: var(--color-primary);
+  color: #d96b20;
   margin-bottom: 5px;
   font-size: 14px;
 }
@@ -996,7 +1225,7 @@
 .filter-group input,
 .filter-group select {
   padding: 8px;
-  border: 2px solid var(--color-secondary);
+  border: 2px solid #f4e57d;
   border-radius: 6px;
   background: white;
   font-size: 14px;
@@ -1005,7 +1234,7 @@
 .filter-group input:focus,
 .filter-group select:focus {
   outline: none;
-  border-color: var(--color-primary);
+  border-color: #d96b20;
 }
 
 .clear-filters {
@@ -1016,7 +1245,7 @@
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: var(--transition);
+  transition: all 0.3s ease;
   height: fit-content;
 }
 
@@ -1033,4 +1262,42 @@
 .category-item.editing {
   flex-direction: column;
   align-items: stretch;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .categories-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .management-form .filtro-container.modulo-productos {
+    flex-direction: column;
+  }
+  
+  .management-form .filtro-item {
+    min-width: auto;
+  }
+  
+  .filters-row {
+    flex-direction: column;
+  }
+  
+  .filter-group {
+    min-width: auto;
+  }
+  
+  .category-actions,
+  .product-actions {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .products-table {
+    font-size: 14px;
+  }
+  
+  .products-table th,
+  .products-table td {
+    padding: 8px;
+  }
 }

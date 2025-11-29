@@ -871,7 +871,6 @@ const productosFiltrados = productosDetallados.filter(producto => {
         )}
 
         {/* MÓDULO CATEGORÍAS / PRODUCTOS */}
-        {/* MÓDULO CATEGORÍAS / PRODUCTOS */}
         {mostrarModuloProductos && (
           <div className="historial-card management-container">
             <h3 className="historial-title">🏷️ Administrar Categorías y Productos</h3>
