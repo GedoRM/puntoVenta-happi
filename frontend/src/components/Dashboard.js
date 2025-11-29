@@ -103,7 +103,7 @@ function Dashboard() {
   // 📌 Datos de hoy
   const cargarDatosDashboard = async () => {
     try {
-      const res = await axios.get("https://puntoventa-happi.onrender.com/api/dashboard/hoy");
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/hoy`);
       setVentasHoy(res.data.ventasHoy);
       setCantidadVentas(res.data.cantidadVentas);
       setProductosVendidos(res.data.productosVendidos);
@@ -115,7 +115,7 @@ function Dashboard() {
 
   const cargarVentasSemana = async () => {
     try {
-      const res = await axios.get("https://puntoventa-happi.onrender.com/api/dashboard/ventas-semana");
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/ventas-semana`);
       setVentasSemana(res.data);
     } catch (err) {
       console.error("Error cargando ventas de la semana:", err);
@@ -221,7 +221,7 @@ function Dashboard() {
     setErrorHistorial("");
 
     axios
-      .get(`https://puntoventa-happi.onrender.com/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
+      .get(`${API_BASE_URL}/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
       .then((res) => {
         setHistorial(res.data);
         setCargandoHistorial(false);
@@ -259,7 +259,7 @@ function Dashboard() {
 
       if (tipo === "pdf") {
         const response = await fetch(
-          `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaParaReporte}&tipo=pdf`
+          `${API_BASE_URL}/api/dashboard/reporte?fecha=${fechaParaReporte}&tipo=pdf`
         );
 
         if (!response.ok) {
@@ -305,7 +305,7 @@ function Dashboard() {
   // 📌 Categorías
   const cargarCategorias = async () => {
     try {
-      const res = await axios.get("https://puntoventa-happi.onrender.com/api/categorias");
+      const res = await axios.get(`${API_BASE_URL}/api/categorias`);
       setCategorias(res.data);
     } catch (err) {
       console.error("Error cargando categorías:", err);
@@ -318,7 +318,7 @@ function Dashboard() {
       return;
     }
     try {
-      const res = await axios.post("https://puntoventa-happi.onrender.com/api/categorias", { nombre: nuevaCategoria });
+      const res = await axios.post(`${API_BASE_URL}/api/categorias`, { nombre: nuevaCategoria });
       setNuevaCategoria("");
       cargarCategorias();
       setToast({ mensaje: `✅ Categoría "${res.data.nombre}" agregada`, tipo: "success" });
@@ -337,7 +337,7 @@ function Dashboard() {
     }
 
     try {
-      await axios.post("https://puntoventa-happi.onrender.com/api/productos", nuevoProducto);
+      await axios.post(`${API_BASE_URL}/api/productos`, nuevoProducto);
       setNuevoProducto({ nombre: "", precio: "", categoria_id: "" });
       setToast({ mensaje: `✅ Producto "${nuevoProducto.nombre}" agregado`, tipo: "success" });
     } catch (err) {
