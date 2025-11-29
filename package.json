@@ -2,13 +2,11 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "body-parser": "^2.2.1",
-    "chart.js": "^4.5.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "pdfkit": "^0.17.2",
     "react": "^18.2.0",
-    "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.2.0",
     "react-scripts": "^0.0.0"
   }
