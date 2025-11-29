@@ -880,3 +880,157 @@
     padding: 15px;
   }
 }
+
+/* ========================================================= */
+/* ✏️ FORMULARIOS DE EDICIÓN */
+/* ========================================================= */
+
+.edit-form {
+  background: var(--color-background);
+  padding: 15px;
+  border-radius: var(--border-radius);
+  border: 2px solid var(--color-secondary);
+  margin: 10px 0;
+}
+
+.edit-form input,
+.edit-form select {
+  width: 100%;
+  padding: 8px;
+  border: 2px solid var(--color-secondary);
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.edit-form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* Botones de acción */
+.btn-edit {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: var(--transition);
+  margin-right: 5px;
+}
+
+.btn-edit:hover {
+  background: #1976D2;
+  transform: scale(1.05);
+}
+
+.btn-save {
+  background: var(--color-success);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: var(--transition);
+}
+
+.btn-save:hover {
+  background: #45a049;
+  transform: scale(1.05);
+}
+
+.btn-cancel {
+  background: #666;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: var(--transition);
+}
+
+.btn-cancel:hover {
+  background: #555;
+  transform: scale(1.05);
+}
+
+/* ========================================================= */
+/* 🔍 FILTROS Y BÚSQUEDA */
+/* ========================================================= */
+
+.filters-section {
+  background: var(--color-light);
+  padding: 15px;
+  border-radius: var(--border-radius);
+  border: 2px solid var(--color-secondary);
+  margin-bottom: 20px;
+}
+
+.filters-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 200px;
+}
+
+.filter-group label {
+  font-weight: bold;
+  color: var(--color-primary);
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 8px;
+  border: 2px solid var(--color-secondary);
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.clear-filters {
+  background: #666;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: var(--transition);
+  height: fit-content;
+}
+
+.clear-filters:hover {
+  background: #555;
+}
+
+/* Estados de edición */
+.editing {
+  background: #e3f2fd !important;
+  border: 2px solid #2196F3 !important;
+}
+
+.category-item.editing {
+  flex-direction: column;
+  align-items: stretch;
+}

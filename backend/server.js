@@ -880,6 +880,70 @@ app.get("/api/productos-detallados", (req, res) => {
 });
 
 // ===============================================================
+//                     ACTUALIZAR CATEGORÍA
+// ===============================================================
+app.put("/api/categorias/:id", (req, res) => {
+  const { id } = req.params;
+  const { nombre } = req.body;
+
+  if (!nombre) {
+    return res.status(400).json({ error: "Nombre de categoría requerido" });
+  }
+
+  db.run("UPDATE categorias SET nombre = ? WHERE id = ?", [nombre, id], function(err) {
+    if (err) {
+      console.error("Error actualizando categoría:", err);
+      if (err.message.includes("UNIQUE constraint failed")) {
+        return res.status(400).json({ error: "Ya existe una categoría con ese nombre" });
+      }
+      return res.status(500).json({ error: "Error actualizando categoría" });
+    }
+
+    if (this.changes === 0) {
+      return res.status(404).json({ error: "Categoría no encontrada" });
+    }
+
+    res.json({
+      message: "Categoría actualizada exitosamente",
+      id: parseInt(id),
+      nombre: nombre
+    });
+  });
+});
+
+// ===============================================================
+//                     ACTUALIZAR PRODUCTO
+// ===============================================================
+app.put("/api/productos/:id", (req, res) => {
+  const { id } = req.params;
+  const { nombre, precio, categoria_id } = req.body;
+
+  if (!nombre || !precio) {
+    return res.status(400).json({ error: "Nombre y precio son requeridos" });
+  }
+
+  db.run(
+    "UPDATE productos SET nombre = ?, precio = ?, categoria_id = ? WHERE id = ?",
+    [nombre, parseFloat(precio), categoria_id || null, id],
+    function(err) {
+      if (err) {
+        console.error("Error actualizando producto:", err);
+        return res.status(500).json({ error: "Error actualizando producto" });
+      }
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: "Producto no encontrado" });
+      }
+
+      res.json({
+        message: "Producto actualizado exitosamente",
+        id: parseInt(id)
+      });
+    }
+  );
+});
+
+// ===============================================================
 //                     MANEJO DE ERRORES GLOBAL
 // ===============================================================
 app.use((err, req, res, next) => {

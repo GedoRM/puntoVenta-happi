@@ -65,6 +65,13 @@ function Dashboard() {
     nombre: '',
     mensaje: ''
   });
+    // Nuevos estados para edición y filtrado
+  const [editandoCategoria, setEditandoCategoria] = useState(null);
+  const [editandoProducto, setEditandoProducto] = useState(null);
+  const [filtrosProductos, setFiltrosProductos] = useState({
+    categoria: '',
+    busqueda: ''
+  });
 
   // Detectar si es móvil
   useEffect(() => {
@@ -464,6 +471,105 @@ function Dashboard() {
     return productosDetallados.filter(p => p.categoria_id == categoriaId).length;
   };
 
+  // 📌 Funciones de edición
+const iniciarEdicionCategoria = (categoria) => {
+  setEditandoCategoria({
+    id: categoria.id,
+    nombre: categoria.nombre
+  });
+};
+
+const cancelarEdicionCategoria = () => {
+  setEditandoCategoria(null);
+};
+
+const guardarCategoria = async () => {
+  if (!editandoCategoria.nombre.trim()) {
+    setToast({ mensaje: "❌ El nombre de la categoría no puede estar vacío", tipo: "error" });
+    return;
+  }
+
+  try {
+    const res = await axios.put(`${API_BASE_URL}/api/categorias/${editandoCategoria.id}`, {
+      nombre: editandoCategoria.nombre
+    });
+    
+    setToast({ mensaje: `✅ ${res.data.message}`, tipo: "success" });
+    setEditandoCategoria(null);
+    cargarCategorias();
+    cargarProductosDetallados();
+    
+  } catch (err) {
+    console.error("Error actualizando categoría:", err);
+    const msg = err.response?.data?.error || "Error actualizando categoría";
+    setToast({ mensaje: `❌ ${msg}`, tipo: "error" });
+  }
+};
+
+const iniciarEdicionProducto = (producto) => {
+  setEditandoProducto({
+    id: producto.id,
+    nombre: producto.nombre,
+    precio: producto.precio,
+    categoria_id: producto.categoria_id || ''
+  });
+};
+
+const cancelarEdicionProducto = () => {
+  setEditandoProducto(null);
+};
+
+const guardarProducto = async () => {
+  if (!editandoProducto.nombre.trim() || !editandoProducto.precio) {
+    setToast({ mensaje: "❌ Nombre y precio son requeridos", tipo: "error" });
+    return;
+  }
+
+  try {
+    const res = await axios.put(`${API_BASE_URL}/api/productos/${editandoProducto.id}`, {
+      nombre: editandoProducto.nombre,
+      precio: editandoProducto.precio,
+      categoria_id: editandoProducto.categoria_id || null
+    });
+    
+    setToast({ mensaje: `✅ ${res.data.message}`, tipo: "success" });
+    setEditandoProducto(null);
+    cargarProductosDetallados();
+    
+  } catch (err) {
+    console.error("Error actualizando producto:", err);
+    const msg = err.response?.data?.error || "Error actualizando producto";
+    setToast({ mensaje: `❌ ${msg}`, tipo: "error" });
+  }
+};
+
+// 📌 Funciones de filtrado
+const handleFiltroChange = (campo, valor) => {
+  setFiltrosProductos(prev => ({
+    ...prev,
+    [campo]: valor
+  }));
+};
+
+const limpiarFiltros = () => {
+  setFiltrosProductos({
+    categoria: '',
+    busqueda: ''
+  });
+};
+
+// 📌 Filtrar productos
+const productosFiltrados = productosDetallados.filter(producto => {
+  const coincideCategoria = !filtrosProductos.categoria || 
+    producto.categoria_id == filtrosProductos.categoria;
+  
+  const coincideBusqueda = !filtrosProductos.busqueda || 
+    producto.nombre.toLowerCase().includes(filtrosProductos.busqueda.toLowerCase()) ||
+    (producto.categoria_nombre && producto.categoria_nombre.toLowerCase().includes(filtrosProductos.busqueda.toLowerCase()));
+  
+  return coincideCategoria && coincideBusqueda;
+});
+
   return (
     <div className="layout">
       {/* Toast Notifications */}
@@ -763,13 +869,15 @@ function Dashboard() {
             </div>
           </div>
         )}
+
+        {/* MÓDULO CATEGORÍAS / PRODUCTOS */}
         {/* MÓDULO CATEGORÍAS / PRODUCTOS */}
         {mostrarModuloProductos && (
-          <div className="historial-card">
+          <div className="historial-card management-container">
             <h3 className="historial-title">🏷️ Administrar Categorías y Productos</h3>
 
             {/* NUEVA CATEGORÍA */}
-            <div className="filtro-container modulo-productos">
+            <div className="filtro-container modulo-productos management-form">
               <div className="filtro-item">
                 <label>Nueva categoría:</label>
                 <input
@@ -783,56 +891,76 @@ function Dashboard() {
             </div>
 
             {/* LISTA DE CATEGORÍAS EXISTENTES */}
-            <div style={{ marginBottom: '30px' }}>
-              <h4 style={{ color: '#d96b20', marginBottom: '15px' }}>📂 Categorías Existentes</h4>
+            <div className="categories-section">
+              <h4>📂 Categorías Existentes</h4>
               {categorias.length === 0 ? (
-                <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
-                  No hay categorías creadas
-                </p>
+                <p className="empty-state">No hay categorías creadas</p>
               ) : (
-                <div className="lista-categorias" style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                  gap: '10px'
-                }}>
+                <div className="categories-list">
                   {categorias.map(categoria => {
                     const productosEnCategoria = obtenerProductosPorCategoria(categoria.id);
+
+                    if (editandoCategoria?.id === categoria.id) {
+                      return (
+                        <div key={categoria.id} className="category-item editing">
+                          <div className="edit-form">
+                            <input
+                              type="text"
+                              value={editandoCategoria.nombre}
+                              onChange={(e) => setEditandoCategoria(prev => ({
+                                ...prev,
+                                nombre: e.target.value
+                              }))}
+                              placeholder="Nombre de la categoría"
+                            />
+                            <div className="edit-form-actions">
+                              <button
+                                className="btn-save"
+                                onClick={guardarCategoria}
+                              >
+                                💾 Guardar
+                              </button>
+                              <button
+                                className="btn-cancel"
+                                onClick={cancelarEdicionCategoria}
+                              >
+                                ✖️ Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
-                      <div key={categoria.id} className="categoria-item" style={{
-                        background: '#fff7c8',
-                        padding: '15px',
-                        borderRadius: '10px',
-                        border: '2px solid #f4e57d',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <div>
-                          <strong style={{ color: '#333' }}>{categoria.nombre}</strong>
-                          <div style={{ fontSize: '12px', color: '#666' }}>
+                      <div key={categoria.id} className="category-item">
+                        <div className="category-info">
+                          <strong>{categoria.nombre}</strong>
+                          <div className="category-count">
                             {productosEnCategoria} productos
                           </div>
                         </div>
-                        <button
-                          onClick={() => abrirModalEliminar(
-                            'categoria',
-                            categoria.id,
-                            categoria.nombre,
-                            `${productosEnCategoria}`
-                          )}
-                          style={{
-                            background: '#ff4444',
-                            color: 'white',
-                            border: 'none',
-                            padding: '5px 10px',
-                            borderRadius: '5px',
-                            cursor: 'pointer',
-                            fontSize: '12px'
-                          }}
-                          title="Eliminar categoría y todos sus productos"
-                        >
-                          🗑️ Eliminar
-                        </button>
+                        <div>
+                          <button
+                            onClick={() => iniciarEdicionCategoria(categoria)}
+                            className="btn-edit"
+                            title="Editar categoría"
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            onClick={() => abrirModalEliminar(
+                              'categoria',
+                              categoria.id,
+                              categoria.nombre,
+                              `${productosEnCategoria}`
+                            )}
+                            className="btn-delete-category"
+                            title="Eliminar categoría y todos sus productos"
+                          >
+                            🗑️ Eliminar
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -841,7 +969,7 @@ function Dashboard() {
             </div>
 
             {/* NUEVO PRODUCTO */}
-            <div className="filtro-container modulo-productos">
+            <div className="filtro-container modulo-productos management-form">
               <div className="filtro-item">
                 <label>Nombre producto:</label>
                 <input
@@ -877,66 +1005,165 @@ function Dashboard() {
               <button onClick={agregarProducto}>Agregar producto</button>
             </div>
 
+            {/* FILTROS DE PRODUCTOS */}
+            <div className="filters-section">
+              <h4 style={{ marginBottom: '15px', color: 'var(--color-primary)' }}>🔍 Filtros de Búsqueda</h4>
+              <div className="filters-row">
+                <div className="filter-group">
+                  <label>Filtrar por categoría:</label>
+                  <select
+                    value={filtrosProductos.categoria}
+                    onChange={(e) => handleFiltroChange('categoria', e.target.value)}
+                  >
+                    <option value="">Todas las categorías</option>
+                    {categorias.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="filter-group">
+                  <label>Buscar por nombre:</label>
+                  <input
+                    type="text"
+                    value={filtrosProductos.busqueda}
+                    onChange={(e) => handleFiltroChange('busqueda', e.target.value)}
+                    placeholder="Nombre del producto o categoría..."
+                  />
+                </div>
+
+                <button
+                  className="clear-filters"
+                  onClick={limpiarFiltros}
+                >
+                  🗑️ Limpiar filtros
+                </button>
+              </div>
+            </div>
+
             {/* LISTA DE PRODUCTOS EXISTENTES */}
-            <div>
-              <h4 style={{ color: '#d96b20', marginBottom: '15px' }}>📦 Productos Existentes</h4>
+            <div className="products-section">
+              <h4>📦 Productos Existentes ({productosFiltrados.length})</h4>
+
               {productosDetallados.length === 0 ? (
-                <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
-                  No hay productos creados
-                </p>
+                <p className="empty-state">No hay productos creados</p>
+              ) : productosFiltrados.length === 0 ? (
+                <p className="empty-state">No se encontraron productos con los filtros aplicados</p>
               ) : (
-                <div className="tabla-productos">
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="products-table-container">
+                  <table className="products-table">
                     <thead>
-                      <tr style={{ background: '#ffd965' }}>
-                        <th style={{ padding: '10px', textAlign: 'left' }}>Producto</th>
-                        <th style={{ padding: '10px', textAlign: 'left' }}>Categoría</th>
-                        <th style={{ padding: '10px', textAlign: 'right' }}>Precio</th>
-                        <th style={{ padding: '10px', textAlign: 'center' }}>Veces Vendido</th>
-                        <th style={{ padding: '10px', textAlign: 'center' }}>Acciones</th>
+                      <tr>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th>Precio</th>
+                        <th>Veces Vendido</th>
+                        <th>Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {productosDetallados.map(producto => (
-                        <tr key={producto.id} style={{ borderBottom: '1px dashed #f4e57d' }}>
-                          <td style={{ padding: '10px' }}>
-                            <strong>{producto.nombre}</strong>
-                          </td>
-                          <td style={{ padding: '10px' }}>
-                            {producto.categoria_nombre || 'Sin categoría'}
-                          </td>
-                          <td style={{ padding: '10px', textAlign: 'right' }}>
-                            ${parseFloat(producto.precio).toFixed(2)}
-                          </td>
-                          <td style={{ padding: '10px', textAlign: 'center' }}>
-                            {producto.veces_vendido || 0}
-                          </td>
-                          <td style={{ padding: '10px', textAlign: 'center' }}>
-                            <button
-                              onClick={() => abrirModalEliminar(
-                                'producto',
-                                producto.id,
-                                producto.nombre,
-                                producto.veces_vendido > 0 ?
-                                  `Este producto ha sido vendido ${producto.veces_vendido} veces.` :
-                                  ''
-                              )}
-                              style={{
-                                background: '#ff4444',
-                                color: 'white',
-                                border: 'none',
-                                padding: '5px 10px',
-                                borderRadius: '5px',
-                                cursor: 'pointer',
-                                fontSize: '12px'
-                              }}
-                              title="Eliminar producto"
-                            >
-                              🗑️ Eliminar
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {productosFiltrados.map(producto => {
+                        if (editandoProducto?.id === producto.id) {
+                          return (
+                            <tr key={producto.id} className="editing">
+                              <td>
+                                <input
+                                  type="text"
+                                  value={editandoProducto.nombre}
+                                  onChange={(e) => setEditandoProducto(prev => ({
+                                    ...prev,
+                                    nombre: e.target.value
+                                  }))}
+                                  placeholder="Nombre del producto"
+                                />
+                              </td>
+                              <td>
+                                <select
+                                  value={editandoProducto.categoria_id}
+                                  onChange={(e) => setEditandoProducto(prev => ({
+                                    ...prev,
+                                    categoria_id: e.target.value
+                                  }))}
+                                >
+                                  <option value="">Sin categoría</option>
+                                  {categorias.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td>
+                                <input
+                                  type="number"
+                                  value={editandoProducto.precio}
+                                  onChange={(e) => setEditandoProducto(prev => ({
+                                    ...prev,
+                                    precio: e.target.value
+                                  }))}
+                                  step="0.01"
+                                  min="0"
+                                />
+                              </td>
+                              <td>
+                                {producto.veces_vendido || 0}
+                              </td>
+                              <td>
+                                <button
+                                  className="btn-save"
+                                  onClick={guardarProducto}
+                                >
+                                  💾 Guardar
+                                </button>
+                                <button
+                                  className="btn-cancel"
+                                  onClick={cancelarEdicionProducto}
+                                >
+                                  ✖️ Cancelar
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return (
+                          <tr key={producto.id}>
+                            <td>
+                              <strong>{producto.nombre}</strong>
+                            </td>
+                            <td>
+                              {producto.categoria_nombre || 'Sin categoría'}
+                            </td>
+                            <td>
+                              ${parseFloat(producto.precio).toFixed(2)}
+                            </td>
+                            <td>
+                              {producto.veces_vendido || 0}
+                            </td>
+                            <td>
+                              <button
+                                onClick={() => iniciarEdicionProducto(producto)}
+                                className="btn-edit"
+                                title="Editar producto"
+                              >
+                                ✏️ Editar
+                              </button>
+                              <button
+                                onClick={() => abrirModalEliminar(
+                                  'producto',
+                                  producto.id,
+                                  producto.nombre,
+                                  producto.veces_vendido > 0 ?
+                                    `Este producto ha sido vendido ${producto.veces_vendido} veces.` :
+                                    ''
+                                )}
+                                className="btn-delete-product"
+                                title="Eliminar producto"
+                              >
+                                🗑️ Eliminar
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -944,45 +1171,6 @@ function Dashboard() {
             </div>
           </div>
         )}
-
-        {/* MODAL DE CONFIRMACIÓN */}
-        {modalConfirmacion.abierto && (
-          <div className="modal-overlay">
-            <div className="modal" style={{ maxWidth: '500px' }}>
-              <h2 style={{ color: '#d96b20', textAlign: 'center' }}>
-                ⚠️ Confirmar Eliminación
-              </h2>
-
-              <div style={{
-                background: '#fff7c8',
-                padding: '15px',
-                borderRadius: '10px',
-                margin: '15px 0',
-                whiteSpace: 'pre-line'
-              }}>
-                {modalConfirmacion.mensaje}
-              </div>
-
-              <div className="modal-buttons">
-                <button
-                  className="modal-confirm"
-                  onClick={confirmarEliminacion}
-                  style={{ background: '#ff4444' }}
-                >
-                  🗑️ Sí, Eliminar
-                </button>
-
-                <button
-                  className="modal-cancel"
-                  onClick={cerrarModal}
-                >
-                  ✖️ Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </div>
     </div>
   );
