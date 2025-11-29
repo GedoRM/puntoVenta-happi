@@ -901,10 +901,185 @@ function Dashboard() {
               </button>
             </div>
 
-            {/* FILTROS DE PRODUCTOS - Siempre visible */}
-            <div className="filters-section">
-              <h4 style={{ marginBottom: '15px', color: 'var(--color-primary)' }}>🔍 Filtros de Búsqueda</h4>
-              <div className="filters-row">
+            {/* NUEVA CATEGORÍA - Se muestra debajo del botón */}
+            {mostrarNuevaCategoria && (
+              <div className="management-section">
+                <div className="section-header">
+                  <h4>➕ Nueva Categoría</h4>
+                  <button
+                    className="btn-close"
+                    onClick={() => setMostrarNuevaCategoria(false)}
+                  >
+                    ✖️
+                  </button>
+                </div>
+                <div className="form-container">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Nombre de la categoría:</label>
+                      <input
+                        type="text"
+                        value={nuevaCategoria}
+                        onChange={(e) => setNuevaCategoria(e.target.value)}
+                        placeholder="Ej: Bebidas, Snacks, Postres..."
+                      />
+                    </div>
+                    <button className="btn-primary" onClick={agregarCategoria}>
+                      Agregar categoría
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* NUEVO PRODUCTO - Se muestra debajo del botón */}
+            {mostrarNuevoProducto && (
+              <div className="management-section">
+                <div className="section-header">
+                  <h4>📦 Nuevo Producto</h4>
+                  <button
+                    className="btn-close"
+                    onClick={() => setMostrarNuevoProducto(false)}
+                  >
+                    ✖️
+                  </button>
+                </div>
+                <div className="form-container">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Nombre producto:</label>
+                      <input
+                        type="text"
+                        value={nuevoProducto.nombre}
+                        onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
+                        placeholder="Nombre del producto"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Precio:</label>
+                      <input
+                        type="number"
+                        value={nuevoProducto.precio}
+                        onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })}
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Categoría:</label>
+                      <select
+                        value={nuevoProducto.categoria_id}
+                        onChange={(e) => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })}
+                      >
+                        <option value="">Selecciona categoría</option>
+                        {categorias.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button className="btn-primary" onClick={agregarProducto}>
+                      Agregar producto
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* LISTA DE CATEGORÍAS EXISTENTES - Se muestra debajo del botón */}
+            {mostrarCategoriasExistentes && (
+              <div className="management-section">
+                <div className="section-header">
+                  <h4>📂 Categorías Existentes</h4>
+                  <button
+                    className="btn-close"
+                    onClick={() => setMostrarCategoriasExistentes(false)}
+                  >
+                    ✖️
+                  </button>
+                </div>
+                {categorias.length === 0 ? (
+                  <p className="empty-state">No hay categorías creadas</p>
+                ) : (
+                  <div className="categories-grid">
+                    {categorias.map(categoria => {
+                      const productosEnCategoria = obtenerProductosPorCategoria(categoria.id);
+
+                      if (editandoCategoria?.id === categoria.id) {
+                        return (
+                          <div key={categoria.id} className="category-card editing">
+                            <div className="edit-form">
+                              <input
+                                type="text"
+                                value={editandoCategoria.nombre}
+                                onChange={(e) => setEditandoCategoria(prev => ({
+                                  ...prev,
+                                  nombre: e.target.value
+                                }))}
+                                placeholder="Nombre de la categoría"
+                              />
+                              <div className="form-actions">
+                                <button
+                                  className="btn-success"
+                                  onClick={guardarCategoria}
+                                >
+                                  💾 Guardar
+                                </button>
+                                <button
+                                  className="btn-secondary"
+                                  onClick={cancelarEdicionCategoria}
+                                >
+                                  ✖️ Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div key={categoria.id} className="category-card">
+                          <div className="category-content">
+                            <div className="category-info">
+                              <h5 className="category-name">{categoria.nombre}</h5>
+                              <span className="category-count">{productosEnCategoria} productos</span>
+                            </div>
+                            <div className="category-actions">
+                              <button
+                                onClick={() => iniciarEdicionCategoria(categoria)}
+                                className="btn-edit"
+                                title="Editar categoría"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={() => abrirModalEliminar(
+                                  'categoria',
+                                  categoria.id,
+                                  categoria.nombre,
+                                  `${productosEnCategoria}`
+                                )}
+                                className="btn-danger"
+                                title="Eliminar categoría y todos sus productos"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* FILTROS DE PRODUCTOS */}
+            <div className="management-section">
+              <div className="section-header">
+                <h4>🔍 Filtros de Búsqueda</h4>
+              </div>
+              <div className="filters-container">
                 <div className="filter-group">
                   <label>Filtrar por categoría:</label>
                   <select
@@ -928,26 +1103,25 @@ function Dashboard() {
                   />
                 </div>
 
-                <button
-                  className="clear-filters"
-                  onClick={limpiarFiltros}
-                >
+                <button className="btn-secondary" onClick={limpiarFiltros}>
                   🗑️ Limpiar filtros
                 </button>
               </div>
             </div>
 
-            {/* LISTA DE PRODUCTOS EXISTENTES - Siempre visible */}
-            <div className="products-section">
-              <h4>📦 Productos Existentes ({productosFiltrados.length})</h4>
+            {/* LISTA DE PRODUCTOS EXISTENTES */}
+            <div className="management-section">
+              <div className="section-header">
+                <h4>📦 Productos Existentes ({productosFiltrados.length})</h4>
+              </div>
 
               {productosDetallados.length === 0 ? (
                 <p className="empty-state">No hay productos creados</p>
               ) : productosFiltrados.length === 0 ? (
                 <p className="empty-state">No se encontraron productos con los filtros aplicados</p>
               ) : (
-                <div className="products-table-container">
-                  <table className="products-table">
+                <div className="table-container">
+                  <table className="data-table">
                     <thead>
                       <tr>
                         <th>Producto</th>
@@ -1003,18 +1177,20 @@ function Dashboard() {
                                 {producto.veces_vendido || 0}
                               </td>
                               <td>
-                                <button
-                                  className="btn-save"
-                                  onClick={guardarProducto}
-                                >
-                                  💾 Guardar
-                                </button>
-                                <button
-                                  className="btn-cancel"
-                                  onClick={cancelarEdicionProducto}
-                                >
-                                  ✖️ Cancelar
-                                </button>
+                                <div className="form-actions">
+                                  <button
+                                    className="btn-success"
+                                    onClick={guardarProducto}
+                                  >
+                                    💾
+                                  </button>
+                                  <button
+                                    className="btn-secondary"
+                                    onClick={cancelarEdicionProducto}
+                                  >
+                                    ✖️
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -1028,34 +1204,36 @@ function Dashboard() {
                             <td>
                               {producto.categoria_nombre || 'Sin categoría'}
                             </td>
-                            <td>
+                            <td className="price-cell">
                               ${parseFloat(producto.precio).toFixed(2)}
                             </td>
-                            <td>
+                            <td className="center-cell">
                               {producto.veces_vendido || 0}
                             </td>
                             <td>
-                              <button
-                                onClick={() => iniciarEdicionProducto(producto)}
-                                className="btn-edit"
-                                title="Editar producto"
-                              >
-                                ✏️ Editar
-                              </button>
-                              <button
-                                onClick={() => abrirModalEliminar(
-                                  'producto',
-                                  producto.id,
-                                  producto.nombre,
-                                  producto.veces_vendido > 0 ?
-                                    `Este producto ha sido vendido ${producto.veces_vendido} veces.` :
-                                    ''
-                                )}
-                                className="btn-delete-product"
-                                title="Eliminar producto"
-                              >
-                                🗑️ Eliminar
-                              </button>
+                              <div className="table-actions">
+                                <button
+                                  onClick={() => iniciarEdicionProducto(producto)}
+                                  className="btn-edit"
+                                  title="Editar producto"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => abrirModalEliminar(
+                                    'producto',
+                                    producto.id,
+                                    producto.nombre,
+                                    producto.veces_vendido > 0 ?
+                                      `Este producto ha sido vendido ${producto.veces_vendido} veces.` :
+                                      ''
+                                  )}
+                                  className="btn-danger"
+                                  title="Eliminar producto"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -1065,169 +1243,7 @@ function Dashboard() {
                 </div>
               )}
             </div>
-
-            {/* NUEVA CATEGORÍA - Se muestra al hacer click */}
-            {mostrarNuevaCategoria && (
-              <div className="filtro-container modulo-productos management-form">
-                <div className="form-header">
-                  <h4>➕ Nueva Categoría</h4>
-                  <button
-                    className="btn-close"
-                    onClick={() => setMostrarNuevaCategoria(false)}
-                  >
-                    ✖️
-                  </button>
-                </div>
-                <div className="filtro-item">
-                  <label>Nombre de la categoría:</label>
-                  <input
-                    type="text"
-                    value={nuevaCategoria}
-                    onChange={(e) => setNuevaCategoria(e.target.value)}
-                    placeholder="Ej: Bebidas, Snacks, Postres..."
-                  />
-                </div>
-                <button onClick={agregarCategoria}>Agregar categoría</button>
-              </div>
-            )}
-
-            {/* NUEVO PRODUCTO - Se muestra al hacer click */}
-            {mostrarNuevoProducto && (
-              <div className="filtro-container modulo-productos management-form">
-                <div className="form-header">
-                  <h4>📦 Nuevo Producto</h4>
-                  <button
-                    className="btn-close"
-                    onClick={() => setMostrarNuevoProducto(false)}
-                  >
-                    ✖️
-                  </button>
-                </div>
-                <div className="filtro-item">
-                  <label>Nombre producto:</label>
-                  <input
-                    type="text"
-                    value={nuevoProducto.nombre}
-                    onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre: e.target.value })}
-                    placeholder="Nombre del producto"
-                  />
-                </div>
-                <div className="filtro-item">
-                  <label>Precio:</label>
-                  <input
-                    type="number"
-                    value={nuevoProducto.precio}
-                    onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio: e.target.value })}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-                <div className="filtro-item">
-                  <label>Categoría:</label>
-                  <select
-                    value={nuevoProducto.categoria_id}
-                    onChange={(e) => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })}
-                  >
-                    <option value="">Selecciona categoría</option>
-                    {categorias.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-                    ))}
-                  </select>
-                </div>
-                <button onClick={agregarProducto}>Agregar producto</button>
-              </div>
-            )}
-
-            {/* LISTA DE CATEGORÍAS EXISTENTES - Se muestra al hacer click */}
-            {mostrarCategoriasExistentes && (
-              <div className="categories-section">
-                <div className="form-header">
-                  <h4>📂 Categorías Existentes</h4>
-                  <button
-                    className="btn-close"
-                    onClick={() => setMostrarCategoriasExistentes(false)}
-                  >
-                    ✖️
-                  </button>
-                </div>
-                {categorias.length === 0 ? (
-                  <p className="empty-state">No hay categorías creadas</p>
-                ) : (
-                  <div className="categories-list">
-                    {categorias.map(categoria => {
-                      const productosEnCategoria = obtenerProductosPorCategoria(categoria.id);
-
-                      if (editandoCategoria?.id === categoria.id) {
-                        return (
-                          <div key={categoria.id} className="category-item editing">
-                            <div className="edit-form">
-                              <input
-                                type="text"
-                                value={editandoCategoria.nombre}
-                                onChange={(e) => setEditandoCategoria(prev => ({
-                                  ...prev,
-                                  nombre: e.target.value
-                                }))}
-                                placeholder="Nombre de la categoría"
-                              />
-                              <div className="edit-form-actions">
-                                <button
-                                  className="btn-save"
-                                  onClick={guardarCategoria}
-                                >
-                                  💾 Guardar
-                                </button>
-                                <button
-                                  className="btn-cancel"
-                                  onClick={cancelarEdicionCategoria}
-                                >
-                                  ✖️ Cancelar
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div key={categoria.id} className="category-item">
-                          <div className="category-info">
-                            <strong>{categoria.nombre}</strong>
-                            <div className="category-count">
-                              {productosEnCategoria} productos
-                            </div>
-                          </div>
-                          <div>
-                            <button
-                              onClick={() => iniciarEdicionCategoria(categoria)}
-                              className="btn-edit"
-                              title="Editar categoría"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={() => abrirModalEliminar(
-                                'categoria',
-                                categoria.id,
-                                categoria.nombre,
-                                `${productosEnCategoria}`
-                              )}
-                              className="btn-delete-category"
-                              title="Eliminar categoría y todos sus productos"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
-
         )}
       </div>
     </div>

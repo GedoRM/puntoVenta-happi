@@ -882,72 +882,210 @@
 }
 
 /* ========================================================= */
-/* 🏷️ GESTIÓN DE CATEGORÍAS Y PRODUCTOS */
+/* 🏷️ GESTIÓN DE CATEGORÍAS Y PRODUCTOS - CSS RECONSTRUIDO */
 /* ========================================================= */
 
-/* Contenedor principal */
 .management-container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 20px;
 }
 
-/* Sección de categorías */
-.categories-section {
-  margin-bottom: 30px;
+/* ========================================================= */
+/* 🎯 BOTONES DE ACCIÓN PRINCIPALES */
+/* ========================================================= */
+
+.management-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
-.categories-section h4 {
-  color: #d96b20;
-  margin-bottom: 15px;
-  font-size: 18px;
-}
-
-.categories-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 10px;
-}
-
-.category-item {
+.action-btn {
   background: #fff7c8;
-  padding: 15px;
-  border-radius: 10px;
-  border: 2px solid #f4e57d;
+  color: #333;
+  border: 2px solid #ffd965;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  background: #ffd965;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.action-btn.active {
+  background: #d96b20;
+  color: white;
+  border-color: #d96b20;
+}
+
+/* ========================================================= */
+/* 🎯 SECCIONES DE GESTIÓN */
+/* ========================================================= */
+
+.management-section {
+  background: white;
+  border: 2px solid #ffd965;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #fff7c8;
+}
+
+.section-header h4 {
+  color: #d96b20;
+  margin: 0;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-close {
+  background: #666;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
   transition: all 0.3s ease;
 }
 
-.category-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+.btn-close:hover {
+  background: #ff4444;
+  transform: scale(1.05);
 }
 
-.category-info strong {
-  color: #333;
-  display: block;
-  margin-bottom: 5px;
+/* ========================================================= */
+/* 🎯 FORMULARIOS */
+/* ========================================================= */
+
+.form-container {
+  width: 100%;
 }
 
-.category-count {
-  font-size: 12px;
-  color: #666;
-}
-
-/* Botones de acción para categorías */
-.category-actions {
+.form-row {
   display: flex;
-  gap: 5px;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 200px;
+}
+
+.form-group label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.form-group input,
+.form-group select {
+  padding: 10px 12px;
+  border: 2px solid #ffd965;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #d96b20;
+  box-shadow: 0 0 0 3px rgba(217, 107, 32, 0.1);
+}
+
+/* ========================================================= */
+/* 🎯 BOTONES */
+/* ========================================================= */
+
+.btn-primary {
+  background: #d96b20;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  height: fit-content;
+  white-space: nowrap;
+}
+
+.btn-primary:hover {
+  background: #b8581a;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #666;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  height: fit-content;
+}
+
+.btn-secondary:hover {
+  background: #555;
+}
+
+.btn-success {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+  background: #45a049;
 }
 
 .btn-edit {
   background: #2196F3;
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 5px;
+  padding: 6px 10px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
   transition: all 0.3s ease;
@@ -955,255 +1093,94 @@
 
 .btn-edit:hover {
   background: #1976D2;
-  transform: scale(1.05);
 }
 
-.btn-delete-category {
+.btn-danger {
   background: #ff4444;
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 5px;
+  padding: 6px 10px;
+  border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
   transition: all 0.3s ease;
 }
 
-.btn-delete-category:hover {
+.btn-danger:hover {
   background: #cc0000;
-  transform: scale(1.05);
 }
 
-/* Sección de productos */
-.products-section h4 {
-  color: #d96b20;
-  margin-bottom: 15px;
-  font-size: 18px;
+.form-actions {
+  display: flex;
+  gap: 8px;
 }
 
-.products-table-container {
-  overflow-x: auto;
+/* ========================================================= */
+/* 🎯 CATEGORÍAS */
+/* ========================================================= */
+
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
 }
 
-.products-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
-
-.products-table th {
-  background: #ffd965;
-  padding: 12px;
-  text-align: left;
-  font-weight: bold;
-  color: #333;
-  border-bottom: 2px solid #f4e57d;
-}
-
-.products-table th:nth-child(3),
-.products-table td:nth-child(3) {
-  text-align: right;
-}
-
-.products-table th:nth-child(4),
-.products-table td:nth-child(4),
-.products-table th:nth-child(5),
-.products-table td:nth-child(5) {
-  text-align: center;
-}
-
-.products-table td {
-  padding: 12px;
-  border-bottom: 1px dashed #f4e57d;
-}
-
-.products-table tr:last-child td {
-  border-bottom: none;
-}
-
-.products-table tr:hover {
+.category-card {
   background: #fff7c8;
+  border: 2px solid #ffd965;
+  border-radius: 8px;
+  padding: 15px;
+  transition: all 0.3s ease;
 }
 
-/* Botones de acción para productos */
-.product-actions {
+.category-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.category-card.editing {
+  background: #e3f2fd;
+  border-color: #2196F3;
+}
+
+.category-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.category-info {
+  flex: 1;
+}
+
+.category-name {
+  color: #333;
+  margin: 0 0 5px 0;
+  font-size: 16px;
+  font-weight: 600;
+  word-wrap: break-word;
+}
+
+.category-count {
+  font-size: 12px;
+  color: #666;
+  background: #ffd965;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.category-actions {
   display: flex;
   gap: 5px;
-  justify-content: center;
-}
-
-.btn-delete-product {
-  background: #ff4444;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.3s ease;
-}
-
-.btn-delete-product:hover {
-  background: #cc0000;
-  transform: scale(1.05);
-}
-
-/* Estados vacíos */
-.empty-state {
-  text-align: center;
-  color: #666;
-  padding: 40px 20px;
-  font-style: italic;
-}
-
-/* Formularios de gestión */
-.management-form {
-  background: #fffdea;
-  padding: 20px;
-  border-radius: 12px;
-  border: 2px solid #f4e57d;
-  margin-bottom: 20px;
-}
-
-.management-form .filtro-container.modulo-productos {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  align-items: flex-end;
-}
-
-.management-form .filtro-item {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 150px;
-}
-
-.management-form label {
-  font-weight: bold;
-  color: #d96b20;
-  margin-bottom: 5px;
-}
-
-.management-form input,
-.management-form select {
-  padding: 10px;
-  border: 2px solid #f4e57d;
-  border-radius: 8px;
-  background: #fffdea;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.management-form input:focus,
-.management-form select:focus {
-  outline: none;
-  border-color: #d96b20;
-  background: white;
-}
-
-.management-form button {
-  background: #d96b20;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  height: fit-content;
-}
-
-.management-form button:hover {
-  background: #b8581a;
-  transform: translateY(-2px);
 }
 
 /* ========================================================= */
-/* ✏️ FORMULARIOS DE EDICIÓN */
+/* 🎯 FILTROS */
 /* ========================================================= */
 
-.edit-form {
-  background: #fffdea;
-  padding: 15px;
-  border-radius: 12px;
-  border: 2px solid #f4e57d;
-  margin: 10px 0;
-}
-
-.edit-form input,
-.edit-form select {
-  width: 100%;
-  padding: 8px;
-  border: 2px solid #f4e57d;
-  border-radius: 6px;
-  background: white;
-  font-size: 14px;
-  margin-bottom: 10px;
-}
-
-.edit-form-actions {
+.filters-container {
   display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.btn-save {
-  background: #4caf50;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.3s ease;
-}
-
-.btn-save:hover {
-  background: #45a049;
-  transform: scale(1.05);
-}
-
-.btn-cancel {
-  background: #666;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.3s ease;
-}
-
-.btn-cancel:hover {
-  background: #555;
-  transform: scale(1.05);
-}
-
-/* ========================================================= */
-/* 🔍 FILTROS Y BÚSQUEDA */
-/* ========================================================= */
-
-.filters-section {
-  background: #fff7c8;
-  padding: 15px;
-  border-radius: 12px;
-  border: 2px solid #f4e57d;
-  margin-bottom: 20px;
-}
-
-.filters-section h4 {
-  color: #d96b20;
-  margin-bottom: 15px;
-  font-size: 16px;
-}
-
-.filters-row {
-  display: flex;
-  gap: 15px;
+  gap: 20px;
   align-items: flex-end;
   flex-wrap: wrap;
 }
@@ -1216,165 +1193,110 @@
 }
 
 .filter-group label {
-  font-weight: bold;
-  color: #d96b20;
+  font-weight: 600;
+  color: #333;
   margin-bottom: 5px;
   font-size: 14px;
 }
 
 .filter-group input,
 .filter-group select {
-  padding: 8px;
-  border: 2px solid #f4e57d;
+  padding: 8px 12px;
+  border: 2px solid #ffd965;
   border-radius: 6px;
   background: white;
   font-size: 14px;
 }
 
-.filter-group input:focus,
-.filter-group select:focus {
-  outline: none;
-  border-color: #d96b20;
-}
-
-.clear-filters {
-  background: #666;
-  color: white;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  height: fit-content;
-}
-
-.clear-filters:hover {
-  background: #555;
-}
-
-/* Estados de edición */
-.editing {
-  background: #e3f2fd !important;
-  border: 2px solid #2196F3 !important;
-}
-
-.category-item.editing {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .categories-list {
-    grid-template-columns: 1fr;
-  }
-  
-  .management-form .filtro-container.modulo-productos {
-    flex-direction: column;
-  }
-  
-  .management-form .filtro-item {
-    min-width: auto;
-  }
-  
-  .filters-row {
-    flex-direction: column;
-  }
-  
-  .filter-group {
-    min-width: auto;
-  }
-  
-  .category-actions,
-  .product-actions {
-    flex-direction: column;
-    gap: 5px;
-  }
-  
-  .products-table {
-    font-size: 14px;
-  }
-  
-  .products-table th,
-  .products-table td {
-    padding: 8px;
-  }
-}
-
 /* ========================================================= */
-/* 🎯 BOTONES DE ACCIÓN PRINCIPALES */
+/* 🎯 TABLA DE PRODUCTOS */
 /* ========================================================= */
 
-.management-actions {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.action-btn {
-  background: #ffd965;
-  color: #333;
-  border: 2px solid #f4e57d;
-  padding: 12px 20px;
+.table-container {
+  overflow-x: auto;
   border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  border: 2px solid #ffd965;
 }
 
-.action-btn:hover {
-  background: #d96b20;
-  color: white;
-  transform: translateY(-2px);
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  min-width: 600px;
 }
 
-.action-btn.active {
-  background: #d96b20;
-  color: white;
-  border-color: #d96b20;
+.data-table th {
+  background: #ffd965;
+  padding: 12px 15px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
 }
 
-/* ========================================================= */
-/* 🎯 ENCABEZADOS DE FORMULARIOS */
-/* ========================================================= */
-
-.form-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #f4e57d;
+.data-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #fff7c8;
+  font-size: 14px;
 }
 
-.form-header h4 {
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr:hover {
+  background: #fff7c8;
+}
+
+.data-table tr.editing {
+  background: #e3f2fd;
+}
+
+.price-cell {
+  text-align: right;
+  font-weight: 600;
   color: #d96b20;
-  margin: 0;
 }
 
-.btn-close {
-  background: #666;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.3s ease;
+.center-cell {
+  text-align: center;
 }
 
-.btn-close:hover {
-  background: #ff4444;
-  transform: scale(1.1);
+.table-actions {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
 }
 
 /* ========================================================= */
-/* 🎯 MEJORAS RESPONSIVE */
+/* 🎯 ESTADOS VACÍOS */
+/* ========================================================= */
+
+.empty-state {
+  text-align: center;
+  color: #666;
+  padding: 40px 20px;
+  font-style: italic;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 2px dashed #ffd965;
+}
+
+/* ========================================================= */
+/* 🎯 FORMULARIOS DE EDICIÓN */
+/* ========================================================= */
+
+.edit-form input {
+  width: 100%;
+  padding: 8px;
+  border: 2px solid #ffd965;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+/* ========================================================= */
+/* 🎯 RESPONSIVE */
 /* ========================================================= */
 
 @media (max-width: 768px) {
@@ -1383,17 +1305,57 @@
   }
   
   .action-btn {
-    justify-content: center;
-    text-align: center;
+    min-width: auto;
   }
   
-  .form-header {
+  .form-row {
+    flex-direction: column;
+  }
+  
+  .form-group {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .filters-container {
+    flex-direction: column;
+  }
+  
+  .filter-group {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .categories-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-content {
     flex-direction: column;
     gap: 10px;
     align-items: flex-start;
   }
   
-  .form-header h4 {
-    font-size: 16px;
+  .category-actions {
+    align-self: flex-end;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  
+  .table-actions {
+    justify-content: flex-start;
+  }
+  
+  .data-table {
+    font-size: 12px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 8px 10px;
   }
 }
