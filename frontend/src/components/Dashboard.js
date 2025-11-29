@@ -107,14 +107,25 @@ const cargarHistorial = () => {
     });
 };
 
-// 📌 Función para generar reporte PDF - VERSIÓN SIMPLIFICADA
+// 📌 Función para generar reporte PDF - VERSIÓN CORREGIDA
 const generarReporte = async (rowData, tipo) => {
   try {
     setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
 
-    // Usar la fecha ISO directamente del row del historial
-    const fechaParaReporte = rowData.fechaISO || rowData.fecha;
+    // Asegurarnos de obtener la fecha correcta
+    let fechaParaReporte;
     
+    if (typeof rowData === 'object' && rowData.fechaISO) {
+      // Si es un objeto del historial, usar fechaISO
+      fechaParaReporte = rowData.fechaISO;
+    } else if (typeof rowData === 'string') {
+      // Si es un string (fecha directamente)
+      fechaParaReporte = rowData;
+    } else {
+      console.error("❌ Formato de datos no reconocido:", rowData);
+      throw new Error('Formato de fecha no válido');
+    }
+
     console.log("🔄 Generando reporte para fecha:", fechaParaReporte);
 
     if (tipo === "pdf") {
@@ -123,15 +134,10 @@ const generarReporte = async (rowData, tipo) => {
       );
       
       if (!response.ok) {
-        throw new Error(`Error del servidor: ${response.status}`);
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
       }
 
       const blob = await response.blob();
-      
-      if (blob.size === 0) {
-        throw new Error('El archivo PDF está vacío');
-      }
-
       const url = window.URL.createObjectURL(blob);
       
       const link = document.createElement('a');
@@ -147,14 +153,13 @@ const generarReporte = async (rowData, tipo) => {
   } catch (err) {
     console.error("Error generando reporte:", err);
     setToast({ 
-      mensaje: `❌ Error al generar reporte: ${err.message}`, 
+      mensaje: `❌ Error: ${err.message}`, 
       tipo: "error" 
     });
   }
   
   setTimeout(() => setToast(""), 4000);
 };
-
   const limpiarFiltro = () => {
     const hoy = new Date().toISOString().split('T')[0];
     const hace7Dias = new Date();
@@ -401,7 +406,7 @@ const generarReporte = async (rowData, tipo) => {
                         <td>
                           <button
                             className="btn-detalles"
-                            onClick={() => generarReporte(row.fecha, "pdf")}
+                            onClick={() => generarReporte(row.fechaISO, "pdf")}
                             title="Descargar reporte PDF"
                           >
                             📄 Generar reporte
