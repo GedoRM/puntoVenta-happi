@@ -123,7 +123,6 @@ const generarReporte = async (rowData, tipo) => {
       );
       
       if (!response.ok) {
-        const errorText = await response.text();
         throw new Error(`Error del servidor: ${response.status}`);
       }
 
