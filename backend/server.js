@@ -384,6 +384,229 @@ app.get("/api/dashboard/hoy", (req, res) => {
 });
 
 // ===============================================================
+//                     HISTORIAL DE VENTAS
+// ===============================================================
+app.get("/api/dashboard/historial", (req, res) => {
+  const { inicio, fin } = req.query;
+
+  if (!inicio || !fin) {
+    return res.status(400).json({ error: "Fechas de inicio y fin requeridas" });
+  }
+
+  const query = `
+    SELECT 
+      DATE(v.fecha) as fecha,
+      COUNT(DISTINCT v.id) as totalTickets,
+      SUM(v.total) as totalVentas,
+      SUM(v.total) as ganancias
+    FROM ventas v
+    WHERE DATE(v.fecha) BETWEEN ? AND ?
+    GROUP BY DATE(v.fecha)
+    ORDER BY fecha DESC
+  `;
+
+  db.all(query, [inicio, fin], (err, rows) => {
+    if (err) {
+      console.error("Error obteniendo historial:", err);
+      return res.status(500).json({ error: "Error obteniendo historial" });
+    }
+
+    // Formatear las fechas y números
+    const historialFormateado = rows.map(row => ({
+      fecha: new Date(row.fecha).toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      }),
+      totalVentas: parseFloat(row.totalVentas || 0).toFixed(2),
+      totalTickets: row.totalTickets || 0,
+      ganancias: parseFloat(row.ganancias || 0).toFixed(2)
+    }));
+
+    res.json(historialFormateado);
+  });
+});
+
+// ===============================================================
+//                     GENERAR REPORTE PDF
+// ===============================================================
+app.get("/api/dashboard/reporte", (req, res) => {
+  const { fecha, tipo } = req.query;
+
+  if (!fecha) {
+    return res.status(400).json({ error: "Fecha requerida" });
+  }
+
+  // Obtener datos de ventas para la fecha específica
+  const queryVentas = `
+    SELECT 
+      v.id as venta_id,
+      v.fecha,
+      v.total,
+      GROUP_CONCAT(p.nombre || ' (x' || dv.cantidad || ')') as productos,
+      COUNT(dv.id) as total_productos
+    FROM ventas v
+    LEFT JOIN detalle_venta dv ON v.id = dv.venta_id
+    LEFT JOIN productos p ON dv.producto_id = p.id
+    WHERE DATE(v.fecha) = ?
+    GROUP BY v.id
+    ORDER BY v.fecha DESC
+  `;
+
+  // Obtener resumen del día
+  const queryResumen = `
+    SELECT 
+      COUNT(*) as total_ventas,
+      SUM(v.total) as total_ingresos,
+      SUM(dv.cantidad) as total_productos_vendidos,
+      (SELECT nombre FROM productos p 
+       JOIN detalle_venta dv ON p.id = dv.producto_id 
+       JOIN ventas v2 ON dv.venta_id = v2.id 
+       WHERE DATE(v2.fecha) = ? 
+       GROUP BY p.id 
+       ORDER BY SUM(dv.cantidad) DESC 
+       LIMIT 1) as producto_mas_vendido
+    FROM ventas v
+    LEFT JOIN detalle_venta dv ON v.id = dv.venta_id
+    WHERE DATE(v.fecha) = ?
+  `;
+
+  db.serialize(() => {
+    // Obtener ventas del día
+    db.all(queryVentas, [fecha], (err, ventas) => {
+      if (err) {
+        console.error("Error obteniendo ventas para reporte:", err);
+        return res.status(500).json({ error: "Error generando reporte" });
+      }
+
+      // Obtener resumen del día
+      db.get(queryResumen, [fecha, fecha], (err, resumen) => {
+        if (err) {
+          console.error("Error obteniendo resumen para reporte:", err);
+          return res.status(500).json({ error: "Error generando reporte" });
+        }
+
+        if (tipo === "pdf") {
+          generarPDF(res, fecha, ventas, resumen);
+        } else {
+          // Devolver datos en JSON
+          res.json({
+            fecha,
+            ventas,
+            resumen: resumen || {
+              total_ventas: 0,
+              total_ingresos: 0,
+              total_productos_vendidos: 0,
+              producto_mas_vendido: null
+            }
+          });
+        }
+      });
+    });
+  });
+});
+
+// ===============================================================
+//                     FUNCIÓN GENERAR PDF
+// ===============================================================
+const generarPDF = (res, fecha, ventas, resumen) => {
+  try {
+    const doc = new PDFDocument();
+    
+    // Configurar headers para descarga
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=reporte-${fecha}.pdf`);
+    
+    doc.pipe(res);
+
+    // Encabezado del PDF
+    doc.fontSize(20)
+       .fillColor('#d96b20')
+       .text('🍨 Happi Helados', 50, 50)
+       .fontSize(16)
+       .fillColor('#333')
+       .text(`Reporte de Ventas - ${fecha}`, 50, 80);
+
+    // Línea separadora
+    doc.moveTo(50, 110)
+       .lineTo(550, 110)
+       .strokeColor('#f4e57d')
+       .lineWidth(2)
+       .stroke();
+
+    // Resumen del día
+    doc.fontSize(14)
+       .fillColor('#d96b20')
+       .text('RESUMEN DEL DÍA', 50, 130)
+       .fontSize(12)
+       .fillColor('#333');
+
+    const resumenData = resumen || {
+      total_ventas: 0,
+      total_ingresos: 0,
+      total_productos_vendidos: 0,
+      producto_mas_vendido: 'N/A'
+    };
+
+    doc.text(`• Total de ventas: ${resumenData.total_ventas || 0}`, 70, 155);
+    doc.text(`• Ingresos totales: $${parseFloat(resumenData.total_ingresos || 0).toFixed(2)}`, 70, 170);
+    doc.text(`• Productos vendidos: ${resumenData.total_productos_vendidos || 0}`, 70, 185);
+    doc.text(`• Producto más vendido: ${resumenData.producto_mas_vendido || 'N/A'}`, 70, 200);
+
+    // Detalle de ventas
+    let yPosition = 240;
+
+    if (ventas && ventas.length > 0) {
+      doc.fontSize(14)
+         .fillColor('#d96b20')
+         .text('DETALLE DE VENTAS', 50, yPosition)
+         .fontSize(12)
+         .fillColor('#333');
+
+      yPosition += 30;
+
+      ventas.forEach((venta, index) => {
+        // Verificar si hay espacio en la página
+        if (yPosition > 700) {
+          doc.addPage();
+          yPosition = 50;
+        }
+
+        doc.text(`Venta #${venta.venta_id} - ${new Date(venta.fecha).toLocaleTimeString('es-ES')}`, 70, yPosition);
+        doc.text(`Productos: ${venta.productos || 'N/A'}`, 70, yPosition + 15);
+        doc.text(`Total: $${parseFloat(venta.total).toFixed(2)}`, 70, yPosition + 30);
+        
+        // Línea separadora entre ventas
+        doc.moveTo(70, yPosition + 45)
+           .lineTo(550, yPosition + 45)
+           .strokeColor('#f4e57d')
+           .lineWidth(1)
+           .stroke();
+
+        yPosition += 60;
+      });
+    } else {
+      doc.fontSize(12)
+         .fillColor('#666')
+         .text('No hay ventas registradas para esta fecha.', 70, yPosition);
+    }
+
+    // Pie de página
+    const pageHeight = doc.page.height;
+    doc.fontSize(10)
+       .fillColor('#999')
+       .text(`Reporte generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}`, 50, pageHeight - 50)
+       .text('🍨 Happi Helados - Sistema de Punto de Venta', 50, pageHeight - 35);
+
+    doc.end();
+
+  } catch (error) {
+    console.error("Error generando PDF:", error);
+    res.status(500).json({ error: "Error generando reporte PDF" });
+  }
+};
+
+// ===============================================================
 //                     MANEJO DE ERRORES GLOBAL
 // ===============================================================
 app.use((err, req, res, next) => {

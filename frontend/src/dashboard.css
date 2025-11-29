@@ -51,10 +51,11 @@
 .dashboard-container {
   padding: 20px;
   flex: 1;
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
   transition: all 0.3s ease;
+  width: 100%;
 }
 
 .dashboard-title {
@@ -69,6 +70,7 @@
   gap: 20px;
   justify-content: center;
   margin-bottom: 30px;
+  flex-wrap: wrap;
 }
 
 .dash-card {
@@ -79,6 +81,7 @@
   text-align: center;
   border: 3px solid #f4e57d;
   box-shadow: 0 0 8px rgba(0,0,0,0.15);
+  flex-shrink: 0;
 }
 
 .dash-card h3 {
@@ -92,37 +95,64 @@
   color: #333;
 }
 
+/* ========================================================= */
+/* 📊 DASHBOARD TABLE - CORREGIDO */
+/* ========================================================= */
 .dashboard-table {
-  width: 85%;
+  width: 100%;
   margin: 30px auto 0 auto;
   background: #fffdea;
   padding: 20px;
   border-radius: 15px;
   border: 3px solid #f4e57d;
   box-shadow: 0 0 10px rgba(0,0,0,0.12);
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+.dashboard-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
 }
 
 .dashboard-table table {
+  width: 100%;
   border-collapse: collapse;
+  min-width: 800px;
 }
 
 .dashboard-table th {
   background: #ffd965;
-  padding: 10px;
-  border-radius: 10px;
+  padding: 15px 12px;
   color: #333;
+  font-weight: bold;
+  text-align: center;
+  border-bottom: 3px solid #f4e57d;
+  white-space: nowrap;
 }
 
 .dashboard-table td {
-  padding: 10px;
+  padding: 12px 10px;
   text-align: center;
   border-bottom: 1px dashed #e1c35a;
+  white-space: nowrap;
+}
+
+.dashboard-table tr:last-child td {
+  border-bottom: none;
+}
+
+.dashboard-table tr:hover {
+  background: rgba(255, 247, 200, 0.3);
 }
 
 .no-data {
   text-align: center;
-  padding: 20px;
+  padding: 40px 20px;
   color: #666;
+  font-style: italic;
+  font-size: 16px;
 }
 
 /* ========================================================= */
@@ -134,8 +164,9 @@
   border-radius: 15px;
   border: 3px solid #f4e57d;
   box-shadow: 0 0 10px rgba(0,0,0,0.12);
-  width: 90%;
+  width: 100%;
   margin: auto;
+  box-sizing: border-box;
 }
 
 .historial-title {
@@ -156,12 +187,14 @@
   border: 2px solid #f4e57d;
   box-shadow: inset 0 0 8px rgba(0,0,0,0.05);
   margin-bottom: 25px;
+  flex-wrap: wrap;
 }
 
 .filtro-item {
   display: flex;
   flex-direction: column;
-  width: 180px;
+  min-width: 180px;
+  flex: 1;
 }
 
 .filtro-item label {
@@ -199,11 +232,18 @@
   font-weight: bold;
   cursor: pointer;
   transition: .2s ease;
+  min-width: 120px;
 }
 
 .btn-filtrar:hover {
   background: #fce583;
   transform: scale(1.03);
+}
+
+.historial-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
 }
 
 .historial-table {
@@ -212,26 +252,36 @@
   margin-top: 10px;
   background: #fffdf4;
   border-radius: 12px;
-  overflow: hidden;
+  min-width: 900px;
 }
 
 .historial-table th {
   background: #ffd965;
-  padding: 12px;
+  padding: 15px 12px;
   font-weight: bold;
   color: #333;
-  border-bottom: 2px solid #f4e57d;
+  border-bottom: 3px solid #f4e57d;
   text-align: center;
+  white-space: nowrap;
 }
 
 .historial-table td {
-  padding: 12px;
+  padding: 12px 10px;
   text-align: center;
   border-bottom: 1px dashed #f4e57d;
+  white-space: nowrap;
+}
+
+.historial-table tr:last-child td {
+  border-bottom: none;
+}
+
+.historial-table tr:hover {
+  background: rgba(255, 247, 200, 0.3);
 }
 
 .historial-table .no-data {
-  padding: 20px;
+  padding: 40px 20px;
   font-style: italic;
   color: #999;
 }
@@ -248,6 +298,7 @@
   font-weight: bold;
   cursor: pointer;
   transition: .2s ease;
+  min-width: 120px;
 }
 
 .btn-limpiar:hover {
@@ -258,13 +309,14 @@
 .btn-detalles {
   background: #ffe08c;
   color: #333;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border: 2px solid #f4d76b;
   border-radius: 10px;
   cursor: pointer;
   font-size: 14px;
   transition: 0.2s ease;
   font-weight: bold;
+  white-space: nowrap;
 }
 
 .btn-detalles:hover {
@@ -539,20 +591,25 @@
   }
   
   .dashboard-cards {
-    flex-wrap: wrap;
+    justify-content: center;
   }
   
   .dash-card {
-    width: calc(50% - 20px);
+    width: calc(33.333% - 20px);
     min-width: 200px;
   }
   
   .historial-card {
-    width: 95%;
+    width: 100%;
   }
   
   .modal {
     width: 380px;
+  }
+  
+  .dashboard-table,
+  .historial-table {
+    min-width: 700px;
   }
 }
 
@@ -660,14 +717,8 @@
   }
   
   .historial-card {
-    width: 90%;
+    width: 100%;
     padding: 15px;
-    overflow-x: auto;
-  }
-  
-  .dashboard-table table,
-  .historial-table {
-    min-width: 600px;
   }
   
   /* Ajustes del filtro */
@@ -735,6 +786,7 @@
   
   .dash-card {
     padding: 15px;
+    min-width: 250px;
   }
   
   .dash-number {
@@ -775,6 +827,11 @@
   .filtro-container.modulo-productos .filtro-item {
     flex: 1 1 100%;
   }
+  
+  .dashboard-table,
+  .historial-table {
+    min-width: 600px;
+  }
 }
 
 /* ========================================================= */
@@ -808,8 +865,8 @@
   }
   
   /* Scroll suave */
-  .dashboard-table,
-  .historial-table {
+  .dashboard-table-container,
+  .historial-table-container {
     -webkit-overflow-scrolling: touch;
   }
 }
