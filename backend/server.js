@@ -797,6 +797,89 @@ const generarPDF = (res, fecha, datos) => {
 };
 
 // ===============================================================
+//                     ELIMINAR CATEGORÍA
+// ===============================================================
+app.delete("/api/categorias/:id", (req, res) => {
+  const { id } = req.params;
+
+  db.serialize(() => {
+    // Primero eliminar todos los productos de esta categoría
+    db.run("DELETE FROM productos WHERE categoria_id = ?", [id], function(err) {
+      if (err) {
+        console.error("Error eliminando productos de la categoría:", err);
+        return res.status(500).json({ error: "Error eliminando productos de la categoría" });
+      }
+
+      const productosEliminados = this.changes;
+      
+      // Luego eliminar la categoría
+      db.run("DELETE FROM categorias WHERE id = ?", [id], function(err) {
+        if (err) {
+          console.error("Error eliminando categoría:", err);
+          return res.status(500).json({ error: "Error eliminando categoría" });
+        }
+
+        if (this.changes === 0) {
+          return res.status(404).json({ error: "Categoría no encontrada" });
+        }
+
+        res.json({
+          message: "Categoría y sus productos eliminados exitosamente",
+          categoria_eliminada: this.changes,
+          productos_eliminados: productosEliminados
+        });
+      });
+    });
+  });
+});
+
+// ===============================================================
+//                     ELIMINAR PRODUCTO
+// ===============================================================
+app.delete("/api/productos/:id", (req, res) => {
+  const { id } = req.params;
+
+  db.run("DELETE FROM productos WHERE id = ?", [id], function(err) {
+    if (err) {
+      console.error("Error eliminando producto:", err);
+      return res.status(500).json({ error: "Error eliminando producto" });
+    }
+
+    if (this.changes === 0) {
+      return res.status(404).json({ error: "Producto no encontrado" });
+    }
+
+    res.json({
+      message: "Producto eliminado exitosamente",
+      productos_eliminados: this.changes
+    });
+  });
+});
+
+// ===============================================================
+//                     OBTENER PRODUCTOS CON DETALLES
+// ===============================================================
+app.get("/api/productos-detallados", (req, res) => {
+  const query = `
+    SELECT 
+      p.*, 
+      c.nombre as categoria_nombre,
+      (SELECT COUNT(*) FROM detalle_venta dv WHERE dv.producto_id = p.id) as veces_vendido
+    FROM productos p 
+    LEFT JOIN categorias c ON p.categoria_id = c.id 
+    ORDER BY c.nombre, p.nombre
+  `;
+
+  db.all(query, (err, rows) => {
+    if (err) {
+      console.error("Error obteniendo productos detallados:", err);
+      return res.status(500).json({ error: "Error obteniendo productos" });
+    }
+    res.json(rows || []);
+  });
+});
+
+// ===============================================================
 //                     MANEJO DE ERRORES GLOBAL
 // ===============================================================
 app.use((err, req, res, next) => {

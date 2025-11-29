@@ -56,6 +56,16 @@ function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Nuevos estados para gestión
+  const [productosDetallados, setProductosDetallados] = useState([]);
+  const [modalConfirmacion, setModalConfirmacion] = useState({
+    abierto: false,
+    tipo: '', // 'categoria' o 'producto'
+    id: null,
+    nombre: '',
+    mensaje: ''
+  });
+
   // Detectar si es móvil
   useEffect(() => {
     const checkScreenSize = () => {
@@ -76,6 +86,7 @@ function Dashboard() {
     cargarDatosDashboard();
     cargarCategorias();
     cargarVentasSemana();
+    cargarProductosDetallados();
 
     // Establecer fechas por defecto (últimos 7 días)
     const hoy = new Date().toISOString().split('T')[0];
@@ -346,6 +357,111 @@ function Dashboard() {
       setToast({ mensaje: `❌ ${msg}`, tipo: "error" });
     }
     setTimeout(() => setToast(""), 3000);
+  };
+
+  // 📌 Cargar productos detallados
+  const cargarProductosDetallados = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/productos-detallados`);
+      setProductosDetallados(res.data);
+    } catch (err) {
+      console.error("Error cargando productos detallados:", err);
+    }
+  };
+
+  // 📌 Abrir modal de confirmación
+  const abrirModalEliminar = (tipo, id, nombre, infoAdicional = '') => {
+    let mensaje = '';
+
+    if (tipo === 'categoria') {
+      mensaje = `¿Estás seguro de que quieres eliminar la categoría "${nombre}"?`;
+      if (infoAdicional) {
+        mensaje += `\n\nSe eliminarán también ${infoAdicional} productos asociados.`;
+      }
+    } else {
+      mensaje = `¿Estás seguro de que quieres eliminar el producto "${nombre}"?`;
+      if (infoAdicional) {
+        mensaje += `\n\n${infoAdicional}`;
+      }
+    }
+
+    setModalConfirmacion({
+      abierto: true,
+      tipo,
+      id,
+      nombre,
+      mensaje
+    });
+  };
+
+  // 📌 Cerrar modal
+  const cerrarModal = () => {
+    setModalConfirmacion({
+      abierto: false,
+      tipo: '',
+      id: null,
+      nombre: '',
+      mensaje: ''
+    });
+  };
+
+  // 📌 Eliminar categoría
+  const eliminarCategoria = async (id) => {
+    try {
+      const res = await axios.delete(`${API_BASE_URL}/api/categorias/${id}`);
+      setToast({
+        mensaje: `✅ ${res.data.message} (${res.data.productos_eliminados} productos eliminados)`,
+        tipo: "success"
+      });
+
+      // Recargar datos
+      cargarCategorias();
+      cargarProductosDetallados();
+      cerrarModal();
+
+    } catch (err) {
+      console.error("Error eliminando categoría:", err);
+      const msg = err.response?.data?.error || "Error eliminando categoría";
+      setToast({ mensaje: `❌ ${msg}`, tipo: "error" });
+      cerrarModal();
+    }
+  };
+
+  // 📌 Eliminar producto
+  const eliminarProducto = async (id) => {
+    try {
+      const res = await axios.delete(`${API_BASE_URL}/api/productos/${id}`);
+      setToast({
+        mensaje: `✅ ${res.data.message}`,
+        tipo: "success"
+      });
+
+      // Recargar datos
+      cargarProductosDetallados();
+      cerrarModal();
+
+    } catch (err) {
+      console.error("Error eliminando producto:", err);
+      const msg = err.response?.data?.error || "Error eliminando producto";
+      setToast({ mensaje: `❌ ${msg}`, tipo: "error" });
+      cerrarModal();
+    }
+  };
+
+  // 📌 Confirmar eliminación
+  const confirmarEliminacion = () => {
+    const { tipo, id } = modalConfirmacion;
+
+    if (tipo === 'categoria') {
+      eliminarCategoria(id);
+    } else if (tipo === 'producto') {
+      eliminarProducto(id);
+    }
+  };
+
+  // 📌 Obtener productos por categoría para el mensaje
+  const obtenerProductosPorCategoria = (categoriaId) => {
+    return productosDetallados.filter(p => p.categoria_id == categoriaId).length;
   };
 
   return (
@@ -647,7 +763,6 @@ function Dashboard() {
             </div>
           </div>
         )}
-
         {/* MÓDULO CATEGORÍAS / PRODUCTOS */}
         {mostrarModuloProductos && (
           <div className="historial-card">
@@ -665,6 +780,64 @@ function Dashboard() {
                 />
               </div>
               <button onClick={agregarCategoria}>Agregar categoría</button>
+            </div>
+
+            {/* LISTA DE CATEGORÍAS EXISTENTES */}
+            <div style={{ marginBottom: '30px' }}>
+              <h4 style={{ color: '#d96b20', marginBottom: '15px' }}>📂 Categorías Existentes</h4>
+              {categorias.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
+                  No hay categorías creadas
+                </p>
+              ) : (
+                <div className="lista-categorias" style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                  gap: '10px'
+                }}>
+                  {categorias.map(categoria => {
+                    const productosEnCategoria = obtenerProductosPorCategoria(categoria.id);
+                    return (
+                      <div key={categoria.id} className="categoria-item" style={{
+                        background: '#fff7c8',
+                        padding: '15px',
+                        borderRadius: '10px',
+                        border: '2px solid #f4e57d',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <div>
+                          <strong style={{ color: '#333' }}>{categoria.nombre}</strong>
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            {productosEnCategoria} productos
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => abrirModalEliminar(
+                            'categoria',
+                            categoria.id,
+                            categoria.nombre,
+                            `${productosEnCategoria}`
+                          )}
+                          style={{
+                            background: '#ff4444',
+                            color: 'white',
+                            border: 'none',
+                            padding: '5px 10px',
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          title="Eliminar categoría y todos sus productos"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             {/* NUEVO PRODUCTO */}
@@ -703,8 +876,113 @@ function Dashboard() {
               </div>
               <button onClick={agregarProducto}>Agregar producto</button>
             </div>
+
+            {/* LISTA DE PRODUCTOS EXISTENTES */}
+            <div>
+              <h4 style={{ color: '#d96b20', marginBottom: '15px' }}>📦 Productos Existentes</h4>
+              {productosDetallados.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#666', padding: '20px' }}>
+                  No hay productos creados
+                </p>
+              ) : (
+                <div className="tabla-productos">
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: '#ffd965' }}>
+                        <th style={{ padding: '10px', textAlign: 'left' }}>Producto</th>
+                        <th style={{ padding: '10px', textAlign: 'left' }}>Categoría</th>
+                        <th style={{ padding: '10px', textAlign: 'right' }}>Precio</th>
+                        <th style={{ padding: '10px', textAlign: 'center' }}>Veces Vendido</th>
+                        <th style={{ padding: '10px', textAlign: 'center' }}>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {productosDetallados.map(producto => (
+                        <tr key={producto.id} style={{ borderBottom: '1px dashed #f4e57d' }}>
+                          <td style={{ padding: '10px' }}>
+                            <strong>{producto.nombre}</strong>
+                          </td>
+                          <td style={{ padding: '10px' }}>
+                            {producto.categoria_nombre || 'Sin categoría'}
+                          </td>
+                          <td style={{ padding: '10px', textAlign: 'right' }}>
+                            ${parseFloat(producto.precio).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '10px', textAlign: 'center' }}>
+                            {producto.veces_vendido || 0}
+                          </td>
+                          <td style={{ padding: '10px', textAlign: 'center' }}>
+                            <button
+                              onClick={() => abrirModalEliminar(
+                                'producto',
+                                producto.id,
+                                producto.nombre,
+                                producto.veces_vendido > 0 ?
+                                  `Este producto ha sido vendido ${producto.veces_vendido} veces.` :
+                                  ''
+                              )}
+                              style={{
+                                background: '#ff4444',
+                                color: 'white',
+                                border: 'none',
+                                padding: '5px 10px',
+                                borderRadius: '5px',
+                                cursor: 'pointer',
+                                fontSize: '12px'
+                              }}
+                              title="Eliminar producto"
+                            >
+                              🗑️ Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
+
+        {/* MODAL DE CONFIRMACIÓN */}
+        {modalConfirmacion.abierto && (
+          <div className="modal-overlay">
+            <div className="modal" style={{ maxWidth: '500px' }}>
+              <h2 style={{ color: '#d96b20', textAlign: 'center' }}>
+                ⚠️ Confirmar Eliminación
+              </h2>
+
+              <div style={{
+                background: '#fff7c8',
+                padding: '15px',
+                borderRadius: '10px',
+                margin: '15px 0',
+                whiteSpace: 'pre-line'
+              }}>
+                {modalConfirmacion.mensaje}
+              </div>
+
+              <div className="modal-buttons">
+                <button
+                  className="modal-confirm"
+                  onClick={confirmarEliminacion}
+                  style={{ background: '#ff4444' }}
+                >
+                  🗑️ Sí, Eliminar
+                </button>
+
+                <button
+                  className="modal-cancel"
+                  onClick={cerrarModal}
+                >
+                  ✖️ Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
