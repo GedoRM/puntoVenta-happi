@@ -1,12 +1,39 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  LineElement,
+  PointElement
+} from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
 import "../dashboard.css";
+
+// Registrar componentes de Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  LineElement,
+  PointElement
+);
 
 function Dashboard() {
   const [ventasHoy, setVentasHoy] = useState(0);
   const [cantidadVentas, setCantidadVentas] = useState(0);
   const [productosVendidos, setProductosVendidos] = useState(0);
   const [topProductos, setTopProductos] = useState([]);
+  const [ventasSemana, setVentasSemana] = useState([]);
 
   const [mostrarHistorial, setMostrarHistorial] = useState(false);
   const [historial, setHistorial] = useState([]);
@@ -14,6 +41,7 @@ function Dashboard() {
   const [fechaFin, setFechaFin] = useState("");
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [errorHistorial, setErrorHistorial] = useState("");
+
 
   // Módulo de categorías y productos
   const [mostrarModuloProductos, setMostrarModuloProductos] = useState(false);
@@ -44,6 +72,7 @@ function Dashboard() {
   useEffect(() => {
     cargarDatosDashboard();
     cargarCategorias();
+    cargarVentasSemana();
 
     // Establecer fechas por defecto (últimos 7 días)
     const hoy = new Date().toISOString().split('T')[0];
@@ -81,85 +110,182 @@ function Dashboard() {
     }
   };
 
+  const cargarVentasSemana = async () => {
+    try {
+      const res = await axios.get("https://puntoventa-happi.onrender.com/api/dashboard/ventas-semana");
+      setVentasSemana(res.data);
+    } catch (err) {
+      console.error("Error cargando ventas de la semana:", err);
+    }
+  };
+
+  // 📊 Configuración para la gráfica de barras
+  const opcionesGrafica = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'Ventas de los últimos 7 días',
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: function (value) {
+            return '$' + value;
+          }
+        }
+      }
+    }
+  };
+
+  const datosGraficaBarras = {
+    labels: ventasSemana.map(item => {
+      const fecha = new Date(item.fecha);
+      return `${fecha.getDate()}/${fecha.getMonth() + 1}`;
+    }),
+    datasets: [
+      {
+        label: 'Ventas Totales ($)',
+        data: ventasSemana.map(item => item.total_ventas),
+        backgroundColor: 'rgba(217, 107, 32, 0.8)',
+        borderColor: 'rgba(217, 107, 32, 1)',
+        borderWidth: 2,
+        borderRadius: 5,
+      },
+      {
+        label: 'Número de Ventas',
+        data: ventasSemana.map(item => item.cantidad_ventas),
+        backgroundColor: 'rgba(248, 241, 150, 0.8)',
+        borderColor: 'rgba(244, 229, 125, 1)',
+        borderWidth: 2,
+        borderRadius: 5,
+        yAxisID: 'y1',
+      }
+    ]
+  };
+
+  // 📊 Configuración para gráfica de doughnut (productos más vendidos)
+  const datosGraficaProductos = {
+    labels: topProductos.map(item => item.nombre),
+    datasets: [
+      {
+        data: topProductos.map(item => item.cantidad),
+        backgroundColor: [
+          '#FF6384',
+          '#36A2EB',
+          '#FFCE56',
+          '#4BC0C0',
+          '#9966FF',
+        ],
+        borderColor: [
+          '#FFFFFF',
+          '#FFFFFF',
+          '#FFFFFF',
+          '#FFFFFF',
+          '#FFFFFF',
+        ],
+        borderWidth: 2,
+      },
+    ],
+  };
+
+  const opcionesGraficaProductos = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'bottom',
+      },
+      title: {
+        display: true,
+        text: 'Productos Más Vendidos Hoy',
+      },
+    },
+  };
+
   // 📌 Historial - Versión mejorada
-const cargarHistorial = () => {
-  if (!fechaInicio || !fechaFin) {
-    setErrorHistorial("Por favor selecciona ambas fechas");
-    return;
-  }
-
-  setCargandoHistorial(true);
-  setErrorHistorial("");
-
-  axios
-    .get(`https://puntoventa-happi.onrender.com/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
-    .then((res) => {
-      setHistorial(res.data);
-      setCargandoHistorial(false);
-      if (res.data.length === 0) {
-        setErrorHistorial("No hay ventas en el rango de fechas seleccionado");
-      }
-    })
-    .catch((err) => {
-      console.error("Error cargando historial:", err);
-      setErrorHistorial("Error al cargar el historial. Intenta nuevamente.");
-      setCargandoHistorial(false);
-    });
-};
-
-// 📌 Función para generar reporte PDF - VERSIÓN CORREGIDA
-const generarReporte = async (rowData, tipo) => {
-  try {
-    setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
-
-    // Asegurarnos de obtener la fecha correcta
-    let fechaParaReporte;
-    
-    if (typeof rowData === 'object' && rowData.fechaISO) {
-      // Si es un objeto del historial, usar fechaISO
-      fechaParaReporte = rowData.fechaISO;
-    } else if (typeof rowData === 'string') {
-      // Si es un string (fecha directamente)
-      fechaParaReporte = rowData;
-    } else {
-      console.error("❌ Formato de datos no reconocido:", rowData);
-      throw new Error('Formato de fecha no válido');
+  const cargarHistorial = () => {
+    if (!fechaInicio || !fechaFin) {
+      setErrorHistorial("Por favor selecciona ambas fechas");
+      return;
     }
 
-    console.log("🔄 Generando reporte para fecha:", fechaParaReporte);
+    setCargandoHistorial(true);
+    setErrorHistorial("");
 
-    if (tipo === "pdf") {
-      const response = await fetch(
-        `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaParaReporte}&tipo=pdf`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
+    axios
+      .get(`https://puntoventa-happi.onrender.com/api/dashboard/historial?inicio=${fechaInicio}&fin=${fechaFin}`)
+      .then((res) => {
+        setHistorial(res.data);
+        setCargandoHistorial(false);
+        if (res.data.length === 0) {
+          setErrorHistorial("No hay ventas en el rango de fechas seleccionado");
+        }
+      })
+      .catch((err) => {
+        console.error("Error cargando historial:", err);
+        setErrorHistorial("Error al cargar el historial. Intenta nuevamente.");
+        setCargandoHistorial(false);
+      });
+  };
+
+  // 📌 Función para generar reporte PDF - VERSIÓN CORREGIDA
+  const generarReporte = async (rowData, tipo) => {
+    try {
+      setToast({ mensaje: "📊 Generando reporte...", tipo: "success" });
+
+      // Asegurarnos de obtener la fecha correcta
+      let fechaParaReporte;
+
+      if (typeof rowData === 'object' && rowData.fechaISO) {
+        // Si es un objeto del historial, usar fechaISO
+        fechaParaReporte = rowData.fechaISO;
+      } else if (typeof rowData === 'string') {
+        // Si es un string (fecha directamente)
+        fechaParaReporte = rowData;
+      } else {
+        console.error("❌ Formato de datos no reconocido:", rowData);
+        throw new Error('Formato de fecha no válido');
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `reporte-${fechaParaReporte}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      console.log("🔄 Generando reporte para fecha:", fechaParaReporte);
 
-      setToast({ mensaje: "✅ Reporte PDF generado y descargado", tipo: "success" });
+      if (tipo === "pdf") {
+        const response = await fetch(
+          `https://puntoventa-happi.onrender.com/api/dashboard/reporte?fecha=${fechaParaReporte}&tipo=pdf`
+        );
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `reporte-${fechaParaReporte}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        setToast({ mensaje: "✅ Reporte PDF generado y descargado", tipo: "success" });
+      }
+    } catch (err) {
+      console.error("Error generando reporte:", err);
+      setToast({
+        mensaje: `❌ Error: ${err.message}`,
+        tipo: "error"
+      });
     }
-  } catch (err) {
-    console.error("Error generando reporte:", err);
-    setToast({ 
-      mensaje: `❌ Error: ${err.message}`, 
-      tipo: "error" 
-    });
-  }
-  
-  setTimeout(() => setToast(""), 4000);
-};
+
+    setTimeout(() => setToast(""), 4000);
+  };
   const limpiarFiltro = () => {
     const hoy = new Date().toISOString().split('T')[0];
     const hace7Dias = new Date();
@@ -297,6 +423,55 @@ const generarReporte = async (rowData, tipo) => {
               <div className="dash-card">
                 <h3>🍦 Productos vendidos</h3>
                 <p className="dash-number">{productosVendidos}</p>
+              </div>
+            </div>
+
+            {/* Gráficas */}
+            <div className="graficas-container" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+              gap: '20px',
+              marginBottom: '30px'
+            }}>
+
+              {/* Gráfica de ventas por día */}
+              <div className="grafica-card" style={{
+                background: '#fffdea',
+                padding: '20px',
+                borderRadius: '15px',
+                border: '3px solid #f4e57d',
+                boxShadow: '0 0 10px rgba(0,0,0,0.12)'
+              }}>
+                <h3 style={{ textAlign: 'center', color: '#d96b20', marginBottom: '15px' }}>
+                  📈 Ventas de la Semana
+                </h3>
+                {ventasSemana.length > 0 ? (
+                  <Bar data={datosGraficaBarras} options={opcionesGrafica} />
+                ) : (
+                  <p className="no-data" style={{ textAlign: 'center', padding: '40px' }}>
+                    No hay datos de ventas de la semana
+                  </p>
+                )}
+              </div>
+
+              {/* Gráfica de productos más vendidos */}
+              <div className="grafica-card" style={{
+                background: '#fffdea',
+                padding: '20px',
+                borderRadius: '15px',
+                border: '3px solid #f4e57d',
+                boxShadow: '0 0 10px rgba(0,0,0,0.12)'
+              }}>
+                <h3 style={{ textAlign: 'center', color: '#d96b20', marginBottom: '15px' }}>
+                  🍦 Productos Más Vendidos
+                </h3>
+                {topProductos.length > 0 ? (
+                  <Doughnut data={datosGraficaProductos} options={opcionesGraficaProductos} />
+                ) : (
+                  <p className="no-data" style={{ textAlign: 'center', padding: '40px' }}>
+                    No hay ventas hoy
+                  </p>
+                )}
               </div>
             </div>
 

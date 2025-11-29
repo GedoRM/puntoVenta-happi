@@ -430,6 +430,39 @@ app.get("/api/dashboard/hoy", (req, res) => {
 });
 
 // ===============================================================
+//                     VENTAS POR DÍA DE LA SEMANA
+// ===============================================================
+app.get("/api/dashboard/ventas-semana", (req, res) => {
+  const query = `
+    SELECT 
+      DATE(fecha) as fecha,
+      SUM(total) as total_ventas,
+      COUNT(*) as cantidad_ventas
+    FROM ventas 
+    WHERE fecha >= date('now', '-7 days')
+    GROUP BY DATE(fecha)
+    ORDER BY fecha ASC
+  `;
+
+  db.all(query, (err, rows) => {
+    if (err) {
+      console.error("Error obteniendo ventas de la semana:", err);
+      return res.status(500).json({ error: "Error obteniendo datos de ventas" });
+    }
+
+    // Formatear datos para la gráfica
+    const ventasPorDia = rows.map(row => ({
+      fecha: row.fecha,
+      total_ventas: parseFloat(row.total_ventas || 0),
+      cantidad_ventas: row.cantidad_ventas || 0,
+      dia_semana: new Date(row.fecha).toLocaleDateString('es-ES', { weekday: 'short' })
+    }));
+
+    res.json(ventasPorDia);
+  });
+});
+
+// ===============================================================
 //                     HISTORIAL DE VENTAS - VERSIÓN DEFINITIVA
 // ===============================================================
 app.get("/api/dashboard/historial", (req, res) => {
